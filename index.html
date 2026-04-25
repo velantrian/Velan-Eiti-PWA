@@ -524,6 +524,11 @@ main {
   font-size: 0.95rem; line-height: 1.6;
   animation: msgIn 0.25s ease;
 }
+
+.msg.ai {
+  max-width: 100%;
+}
+
 @keyframes msgIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -2189,36 +2194,46 @@ let currentUtterance = null;
 function speakMessage(msgId) {
   const msgEl = document.getElementById(msgId);
   if (!msgEl) return;
-  
+
   // Остановить текущее воспроизведение
   if (window.speechSynthesis.speaking) {
     window.speechSynthesis.cancel();
     if (currentUtterance && currentUtterance._msgId === msgId) {
       currentUtterance = null;
-      return; // Если это то же сообщение, просто останавливаем
+      return;
     }
   }
-  
-  const text = msgEl.innerText || msgEl.textContent;
+
+  let text = msgEl.innerText || msgEl.textContent;
+
+  // Удалить эмодзи и специальные символы, оставить только буквы, цифры и пунктуацию
+  text = text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{2500}-\u{259F}]|[\u{0080}-\u{00FF}]|[^\w\s.,!?;:\-—–…()\n]/gu, ' ');
+  text = text.replace(/\s+/g, ' ').trim();
+
+  if (!text) {
+    showToast('❌ Нет текста для озвучивания');
+    return;
+  }
+
   const utterance = new SpeechSynthesisUtterance(text);
   utterance._msgId = msgId;
   utterance.lang = 'ru-RU';
   utterance.rate = 1;
   utterance.pitch = 1;
-  
+
   utterance.onstart = () => {
     showToast('🔊 Воспроизведение...');
   };
-  
+
   utterance.onend = () => {
     currentUtterance = null;
   };
-  
+
   utterance.onerror = () => {
     currentUtterance = null;
     showToast('❌ Ошибка воспроизведения');
   };
-  
+
   currentUtterance = utterance;
   window.speechSynthesis.speak(utterance);
 }
