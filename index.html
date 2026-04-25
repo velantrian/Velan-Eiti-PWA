@@ -1262,6 +1262,13 @@ main {
           <div class="field">
             <button id="newAgentBtn" class="btn-small" style="width:100%" data-i18n="btn_new_agent">+ Новый агент</button>
           </div>
+          <div class="field">
+            <label>Экспорт</label>
+            <button id="exportHistoryJson" class="btn-small" style="width:100%">📥 JSON</button>
+          </div>
+          <div class="field">
+            <button id="exportHistoryTxt" class="btn-small" style="width:100%">📥 TXT</button>
+          </div>
           <button id="clearHistory" class="btn-small btn-danger" data-i18n="btn_clear_history">🗑 Очистить историю</button>
         </div>
         <div id="historyItems"></div>
@@ -1899,23 +1906,24 @@ document.getElementById('clearAgentBtn').addEventListener('click', async () => {
 });
 
 // ── Fullscreen on double tap ───────────────────────────────────────────────
-let lastTap = 0;
-function handleDoubleTap(element) {
-  element.addEventListener('touchend', (e) => {
-    const now = Date.now();
-    if (now - lastTap < 300 && now - lastTap > 0) {
-      if (!document.fullscreenElement) {
-        element.requestFullscreen().catch(() => {});
-      } else {
-        document.exitFullscreen().catch(() => {});
-      }
-      e.preventDefault();
-    }
-    lastTap = now;
-  });
-}
-handleDoubleTap(document.getElementById('chatHistory'));
-handleDoubleTap(document.getElementById('agentHistory'));
+// Отключено - слишком часто срабатывало при случайном двойном касании
+// let lastTap = 0;
+// function handleDoubleTap(element) {
+//   element.addEventListener('touchend', (e) => {
+//     const now = Date.now();
+//     if (now - lastTap < 300 && now - lastTap > 0) {
+//       if (!document.fullscreenElement) {
+//         element.requestFullscreen().catch(() => {});
+//       } else {
+//         document.exitFullscreen().catch(() => {});
+//       }
+//       e.preventDefault();
+//     }
+//     lastTap = now;
+//   });
+// }
+// handleDoubleTap(document.getElementById('chatHistory'));
+// handleDoubleTap(document.getElementById('agentHistory'));
 
 // ── Chunking System ───────────────────────────────────────────────────────
 const CHUNK_SIZE = 2000; // символов на чанк
@@ -2780,6 +2788,55 @@ document.getElementById('historySearch').addEventListener('keypress', (e) => {
 
 // History filter change
 document.getElementById('historyFilter').addEventListener('change', loadHistory);
+
+// Экспорт истории в JSON
+document.getElementById('exportHistoryJson').addEventListener('click', async () => {
+  if (!db) return;
+  const filter = document.getElementById('historyFilter').value;
+  const searchQuery = document.getElementById('historySearch').value.toLowerCase();
+  let items = await dbGetAll('messages');
+
+  if (filter !== 'all') {
+    items = items.filter(item => item.panel === filter);
+  }
+  if (searchQuery) {
+    items = items.filter(item => item.content.toLowerCase().includes(searchQuery));
+  }
+
+  const data = JSON.stringify(items, null, 2);
+  downloadFile(data, 'velan-eiti-history.json', 'application/json');
+  showToast(`📥 История экспортирована (JSON) - ${items.length} сообщений`);
+});
+
+// Экспорт истории в TXT
+document.getElementById('exportHistoryTxt').addEventListener('click', async () => {
+  if (!db) return;
+  const filter = document.getElementById('historyFilter').value;
+  const searchQuery = document.getElementById('historySearch').value.toLowerCase();
+  let items = await dbGetAll('messages');
+
+  if (filter !== 'all') {
+    items = items.filter(item => item.panel === filter);
+  }
+  if (searchQuery) {
+    items = items.filter(item => item.content.toLowerCase().includes(searchQuery));
+  }
+
+  items.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  let text = '=== Velan Eiti History Export ===\n';
+  text += `Filter: ${filter === 'all' ? 'Все' : filter}\n`;
+  text += `Date: ${new Date().toLocaleString('ru-RU')}\n\n`;
+
+  items.forEach(item => {
+    const role = item.role === 'user' ? '👤 Вы' : '⚡ Velan Eiti';
+    const panel = item.panel === 'agent' ? '🤖 Агент' : '💭 Чат';
+    const time = new Date(item.ts).toLocaleString('ru-RU');
+    text += `[${time}] ${role} (${panel})\n${item.content}\n\n`;
+  });
+
+  downloadFile(text, 'velan-eiti-history.txt', 'text/plain');
+  showToast(`📥 История экспортирована (TXT) - ${items.length} сообщений`);
+});
 
 // Clear history
 document.getElementById('clearHistory').addEventListener('click', async () => {
