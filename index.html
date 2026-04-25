@@ -1905,42 +1905,24 @@ document.getElementById('clearAgentBtn').addEventListener('click', async () => {
   }
 });
 
-// ── Fullscreen button handler ───────────────────────────────────────────────
-function toggleFullscreen(element) {
-  if (!document.fullscreenElement) {
-    element.requestFullscreen().catch(() => showToast('❌ Fullscreen недоступен'));
-  } else {
-    document.exitFullscreen().catch(() => {});
-  }
-}
-
-// Add fullscreen buttons to chat and agent
-const addFullscreenButton = (panelId, buttonContainerId) => {
-  const panel = document.getElementById(panelId);
-  if (panel) {
-    const btn = document.createElement('button');
-    btn.innerHTML = '⛶';
-    btn.style.cssText = 'position:absolute;top:50%;transform:translateY(-50%);right:10px;background:none;border:none;font-size:1.2rem;cursor:pointer;opacity:0.5;transition:opacity 0.2s';
-    btn.onmouseover = () => btn.style.opacity = '1';
-    btn.onmouseout = () => btn.style.opacity = '0.5';
-    btn.onclick = () => toggleFullscreen(panel);
-    btn.title = 'Fullscreen';
-    // Add to the panel (positioned relative)
-    panel.style.position = 'relative';
-    panel.style.overflow = 'hidden';
-    // Insert near top right
-    const header = panel.querySelector('.chat-header') || panel.querySelector('.chat-history');
-    if (header && header.parentNode) {
-      header.parentNode.style.position = 'relative';
-      header.parentNode.appendChild(btn);
+// ── Fullscreen on double tap ───────────────────────────────────────────────
+let lastTap = 0;
+function handleDoubleTap(element) {
+  element.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTap < 400 && now - lastTap > 0) {
+      if (!document.fullscreenElement) {
+        element.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+      e.preventDefault();
     }
-  }
-};
-
-setTimeout(() => {
-  addFullscreenButton('panel-chat', 'chatHistory');
-  addFullscreenButton('panel-agent', 'agentHistory');
-}, 500);
+    lastTap = now;
+  });
+}
+handleDoubleTap(document.getElementById('chatHistory'));
+handleDoubleTap(document.getElementById('agentHistory'));
 
 // ── Chunking System ───────────────────────────────────────────────────────
 const CHUNK_SIZE = 2000; // символов на чанк
@@ -2483,8 +2465,24 @@ async function sendMessage(inputEl, historyEl) {
 
     if (isGreeting) {
       const greetingReply = isRussian
-        ? `👋 Привет! Я Velan Eiti — ваш персональный AI помощник.\n\nСпросите что я умею делать, или подскажи как система устроена! 🚀`
-        : `👋 Hi! I'm Velan Eiti — your personal AI assistant.\n\nAsk what I can do, or tell me how the system is built! 🚀`;
+        ? `👋 Привет! Я Velan Eiti — персональный помощник для работы с AI.\n\n💭 **О моем статусе:**
+Я не настоящий AI, а скорее интеллектуальный интерфейс для подключения к различным AI провайдерам (Claude, DeepSeek, OpenAI, Groq, OpenRouter и локальный Ollama).\n\n🎯 **Мои основные возможности:**
+• Организация чатов и агентских сессий
+• Работа с файлами (PDF, TXT, DOCX, изображения)
+• Сохранение памяти между разговорами
+• Работа полностью в браузере (IndexedDB)
+• Офлайн режим через Ollama\n\n⚡ **Ограничения:**
+Без подключенного AI провайдера я могу только отвечать на простые вопросы о себе. Для полноценного взаимодействия нужен AI.\n\n🚀 **Что дальше?**
+Спросите меня что я умею, или как система устроена! Или подключите AI в настройках.`
+        : `👋 Hi! I'm Velan Eiti — your personal assistant for AI interaction.\n\n💭 **About my status:**
+I'm not a real AI, but rather an intelligent interface for connecting to various AI providers (Claude, DeepSeek, OpenAI, Groq, OpenRouter, and local Ollama).\n\n🎯 **My main capabilities:**
+• Organize chats and agent sessions
+• Work with files (PDF, TXT, DOCX, images)
+• Save memory between conversations
+• Work entirely in browser (IndexedDB)
+• Offline mode via Ollama\n\n⚡ **Limitations:**
+Without a connected AI provider, I can only answer simple questions about myself. For full interaction, an AI is needed.\n\n🚀 **What's next?**
+Ask me what I can do, or how the system works! Or connect AI in settings.`;
       appendMsg(greetingReply, 'ai', historyEl);
       if (db) dbPut('messages', { role: 'assistant', content: greetingReply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
       typing.remove();
@@ -2493,58 +2491,52 @@ async function sendMessage(inputEl, historyEl) {
 
     if (isAboutArchitecture) {
       const archReply = isRussian
-        ? `🏗️ **Как устроена система Velan Eiti:**
+        ? `🏗️ **Архитектура Velan Eiti:**
 
-🎯 **Основа** — HTML/CSS/JS в одном файле, никаких фреймворков
+**Основной стек:**
+Всё построено на чистом HTML/CSS/JavaScript в одном файле — никаких фреймворков, никаких зависимостей. Это делает приложение очень легким (328 КБ) и быстрым.\n\n**Хранилище (IndexedDB):**
+Все данные хранятся локально в браузере:
+- 💬 Чаты и сообщения
+- 🧠 Память (ключ-значение для контекста)
+- 📄 Файлы и их чанки (для RAG)
+- ⚙️ Конфигурация и настройки\n\n**AI Провайдеры:**
+- 🏠 Ollama (локально, localhost:11434, 100% офлайн)
+- 🤖 Claude (Anthropic API)
+- 📘 OpenAI (ChatGPT и модели)
+- 🟣 DeepSeek (AI провайдер)
+- ⚡ Groq (быстрые инференции)
+- 🔄 OpenRouter (агрегатор моделей)\n\n**Режимы работы:**
+- 💬 **Чат** — обычный диалог с выбранным AI
+- ⚡ **Агент** — автономный режим (читает файлы, пишет код, запускает команды)
+- 🧠 **Память** — хранилище важных данных между сессиями
+- 📜 **История** — архив всех чатов, экспорт в JSON/TXT
+- 📁 **Файлы** — загрузка и RAG (поиск релевантных фрагментов)
+- ⚙️ **Настройки** — выбор провайдера, модели, языка, темы\n\n**PWA Функции:**
+Приложение работает как Native App — устанавливается на экран, работает офлайн (через Ollama), имеет Service Worker.\n\n**Оформление:**
+13 уникальных тем на выбор — светлые, темные, контрастные варианты.`
+        : `🏗️ **Velan Eiti Architecture:**
 
-💾 **Хранилище** — всё в IndexedDB (браузер):
-   • Чаты и сообщения
-   • Память (ключ-значение)
-   • Файлы и чанки
-   • Конфигурация
-
-🤖 **AI провайдеры**:
-   • Ollama (локально, офлайн на localhost:11434)
-   • Claude (Anthropic)
-   • OpenAI, DeepSeek, Groq, OpenRouter
-
-🎮 **Режимы**:
-   • 💬 Чат — общение с AI
-   • ⚡ Агент — автономные задачи (читает, пишет, запускает)
-   • 🧠 Память — сохранение ключевых данных
-   • 📜 История — архив всех сессий
-   • 📁 Файлы — RAG для контекста
-   • ⚙️ Настройки — выбор провайдера, темы
-
-📱 **PWA** — устанавливается на экран, работает офлайн через Ollama
-
-🎨 **13 тем** оформления на выбор`
-        : `🏗️ **How Velan Eiti System is Built:**
-
-🎯 **Foundation** — HTML/CSS/JS in one file, no frameworks
-
-💾 **Storage** — everything in IndexedDB (browser):
-   • Chats and messages
-   • Memory (key-value)
-   • Files and chunks
-   • Configuration
-
-🤖 **AI Providers**:
-   • Ollama (local, offline on localhost:11434)
-   • Claude (Anthropic)
-   • OpenAI, DeepSeek, Groq, OpenRouter
-
-🎮 **Modes**:
-   • 💬 Chat — talk with AI
-   • ⚡ Agent — autonomous tasks (reads, writes, executes)
-   • 🧠 Memory — save key data
-   • 📜 History — archive of all sessions
-   • 📁 Files — RAG for context
-   • ⚙️ Settings — choose provider, theme
-
-📱 **PWA** — installs on screen, works offline via Ollama
-
-🎨 **13 themes** to choose from`;
+**Core Stack:**
+Everything built with pure HTML/CSS/JavaScript in one file — no frameworks, no dependencies. This makes it lightweight (328 KB) and fast.\n\n**Storage (IndexedDB):**
+All data stored locally in browser:
+- 💬 Chats and messages
+- 🧠 Memory (key-value for context)
+- 📄 Files and chunks (for RAG)
+- ⚙️ Configuration and settings\n\n**AI Providers:**
+- 🏠 Ollama (local, localhost:11434, 100% offline)
+- 🤖 Claude (Anthropic API)
+- 📘 OpenAI (ChatGPT and models)
+- 🟣 DeepSeek (AI provider)
+- ⚡ Groq (fast inference)
+- 🔄 OpenRouter (model aggregator)\n\n**Work Modes:**
+- 💬 **Chat** — regular dialog with selected AI
+- ⚡ **Agent** — autonomous mode (reads files, writes code, runs commands)
+- 🧠 **Memory** — storage for important data between sessions
+- 📜 **History** — archive of all chats, export to JSON/TXT
+- 📁 **Files** — upload and RAG (search relevant chunks)
+- ⚙️ **Settings** — choose provider, model, language, theme\n\n**PWA Features:**
+App works like Native App — installs on screen, works offline (via Ollama), has Service Worker.\n\n**Design:**
+13 unique themes to choose from — light, dark, contrast variants.`;
       appendMsg(archReply, 'ai', historyEl);
       if (db) dbPut('messages', { role: 'assistant', content: archReply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
       typing.remove();
@@ -2553,44 +2545,28 @@ async function sendMessage(inputEl, historyEl) {
 
     if (isAboutCapabilities) {
       const capabilitiesReply = isRussian
-        ? `🎯 Вот что я могу делать:
+        ? `🎯 **Мои возможности (без подключенного AI):**
 
-📝 **Чат** — разговариваю с любым AI (Claude, DeepSeek, OpenAI, Groq, OpenRouter или локально Ollama)
+⚠️ **Важно знать:** Я сам по себе не AI, а контейнер для работы с различными AI. Мои встроенные ответы ограничены и не могут заменить настоящий AI.\n\n📝 **Чат:**
+Разговариваю с любым подключенным AI — Claude, DeepSeek, OpenAI, Groq, OpenRouter или локально Ollama. Ваши сообщения идут прямиком к выбранному AI.\n\n⚡ **Агент:**
+Выполняю сложные задачи пошагово — читаю файлы, пишу и запускаю код, выполняю команды. Это как иметь личного помощника, который может всё делать автономно.\n\n🧠 **Память:**
+Сохраняю важные факты и данные в хранилище (key-value). Это помогает AI запомнить контекст между разными разговорами.\n\n📜 **История:**
+Все ваши чаты и агентские сессии сохраняются. Можно искать по сообщениям, фильтровать, экспортировать в JSON или TXT.\n\n📁 **Файлы:**
+Загружаю PDF, TXT, DOCX, изображения. Использую RAG (Retrieval-Augmented Generation) — умный поиск релевантных кусков текста для контекста.\n\n⚙️ **Настройки:**
+Выбираю AI провайдера, модель, язык интерфейса, одну из 13 тем оформления.\n\n💾 **Офлайн режим:**
+Работаю полностью в браузере через IndexedDB. С Ollama могу работать без интернета.\n\n🚀 **Как получить максимум?**
+Подключите любой AI провайдер в настройках! Я превращусь в мощный инструмент для продуктивности.`
+        : `🎯 **My capabilities (without connected AI):**
 
-⚡ **Агент** — выполняю сложные задачи пошагово: читаю файлы, пишу код, запускаю команды и докладываю результаты
-
-🧠 **Память** — сохраняю ключевые факты и данные (key-value хранилище) для контекста между чатами
-
-📜 **История** — все чаты и агентские сессии доступны в архиве, можно экспортировать
-
-📁 **Файлы** — загружаю PDF, TXT, DOCX, изображения; использую RAG (поиск релевантных кусков) в ответах
-
-⚙️ **Настройки** — выбираю AI провайдера, модель, язык, тему оформления (13 тем!)
-
-💾 **Офлайн** — работаю полностью в браузере через IndexedDB; могу работать локально через Ollama без интернета
-
-📤 **Экспорт** — сохраняю данные в JSON, TXT форматах
-
-Для большего потенциала подключите AI провайдера в настройках! 🚀`
-        : `🎯 Here's what I can do:
-
-📝 **Chat** — talk with any AI (Claude, DeepSeek, OpenAI, Groq, OpenRouter or local Ollama)
-
-⚡ **Agent** — execute complex tasks step-by-step: read files, write code, run commands and report results
-
-🧠 **Memory** — save key facts and data (key-value storage) for context between chats
-
-📜 **History** — all chats and agent sessions available in the archive, can export
-
-📁 **Files** — upload PDF, TXT, DOCX, images; use RAG (retrieve relevant chunks) in responses
-
-⚙️ **Settings** — choose AI provider, model, language, theme (13 themes!)
-
-💾 **Offline** — work fully in browser via IndexedDB; can work locally via Ollama without internet
-
-📤 **Export** — save data in JSON, TXT formats
-
-Connect an AI provider in settings for full potential! 🚀`;
+⚠️ **Important:** I'm not an AI myself, but a container for working with various AIs. My built-in answers are limited and can't replace a real AI.\n\n📝 **Chat:**
+Talk with any connected AI — Claude, DeepSeek, OpenAI, Groq, OpenRouter, or local Ollama. Your messages go straight to the selected AI.\n\n⚡ **Agent:**
+Execute complex tasks step-by-step — read files, write and run code, execute commands. It's like having a personal assistant who can do everything autonomously.\n\n🧠 **Memory:**
+Save important facts and data in storage (key-value). Helps AI remember context between different conversations.\n\n📜 **History:**
+All your chats and agent sessions are saved. Search messages, filter, export to JSON or TXT.\n\n📁 **Files:**
+Upload PDF, TXT, DOCX, images. Use RAG (Retrieval-Augmented Generation) — smart search for relevant text chunks for context.\n\n⚙️ **Settings:**
+Choose AI provider, model, interface language, one of 13 design themes.\n\n💾 **Offline Mode:**
+Work entirely in browser via IndexedDB. With Ollama, work without internet.\n\n🚀 **How to get maximum?**
+Connect any AI provider in settings! I'll become a powerful productivity tool.`;
       appendMsg(capabilitiesReply, 'ai', historyEl);
       if (db) dbPut('messages', { role: 'assistant', content: capabilitiesReply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
       typing.remove();
