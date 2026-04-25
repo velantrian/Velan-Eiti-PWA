@@ -2297,8 +2297,34 @@ function copyMessage(msgId) {
 let currentUtterance = null;
 let ttsQueue = [];
 let ttsActiveMsgId = null;
+let ttsKeepAliveInterval = null;
+
+function startTtsKeepAlive() {
+  if (ttsKeepAliveInterval) return;
+  ttsKeepAliveInterval = setInterval(() => {
+    if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+      window.speechSynthesis.pause();
+      window.speechSynthesis.resume();
+    }
+  }, 5000);
+}
+
+function stopTtsKeepAlive() {
+  clearInterval(ttsKeepAliveInterval);
+  ttsKeepAliveInterval = null;
+}
+
+// Возобновить TTS если браузер его остановил при скрытии страницы
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && ttsActiveMsgId) {
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
+  }
+});
 
 function ttsStop() {
+  stopTtsKeepAlive();
   window.speechSynthesis.cancel();
   ttsQueue = [];
   ttsActiveMsgId = null;
@@ -2323,7 +2349,7 @@ function ttsSplitChunks(text, maxLen) {
 }
 
 function ttsSpeakNext() {
-  if (!ttsQueue.length) { ttsActiveMsgId = null; currentUtterance = null; return; }
+  if (!ttsQueue.length) { stopTtsKeepAlive(); ttsActiveMsgId = null; currentUtterance = null; return; }
   const chunk = ttsQueue.shift();
   const voices = window.speechSynthesis.getVoices();
   const ruVoice = voices.find(v => v.lang && v.lang.startsWith('ru'));
@@ -2360,10 +2386,9 @@ function speakMessage(msgId) {
   if (!text) { showToast('❌ Нет текста для озвучивания'); return; }
 
   function doSpeak() {
-    // Разбить на чанки ≤200 символов — обходит лимит Android TTS
-    // и 15-секундный баг Chrome без pause/resume
     ttsQueue = ttsSplitChunks(text, 200);
     ttsActiveMsgId = msgId;
+    startTtsKeepAlive();
     showToast('🔊 Воспроизведение...');
     ttsSpeakNext();
   }
@@ -2769,7 +2794,7 @@ Connect any AI provider in settings! I'll become a powerful productivity tool.`;
               const token = json.message?.content || '';
               fullReply += token;
               if (msgContent) msgContent.innerHTML = renderMarkdown(fullReply);
-              historyEl.scrollTop = historyEl.scrollHeight;
+              if (!historyEl.dataset.userScrolled) historyEl.scrollTop = historyEl.scrollHeight;
             } catch {}
           }
         }
@@ -2892,7 +2917,7 @@ Connect any AI provider in settings! I'll become a powerful productivity tool.`;
             }
             fullReply += token;
             if (msgContent) msgContent.innerHTML = renderMarkdown(fullReply);
-            historyEl.scrollTop = historyEl.scrollHeight;
+            if (!historyEl.dataset.userScrolled) historyEl.scrollTop = historyEl.scrollHeight;
           } catch {}
         }
       }
