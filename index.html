@@ -1380,10 +1380,16 @@ main {
             </select>
           </div>
           <div class="field">
+            <label>Подключить интернет</label>
+            <button id="toggleDuckDuckGo" class="btn-small" style="width:100%;background:rgba(220,53,69,0.3);border-color:rgba(220,53,69,0.6)">⚠️ Поиск не активен</button>
+            <p style="font-size:0.78rem;color:var(--text-dim);margin-top:5px">🌐 DuckDuckGo поиск — Бесплатный интернет поиск для контекста</p>
+          </div>
+          <div class="field">
             <label>API Key</label>
             <div class="input-with-btn">
               <input type="password" id="cfgApiKey" placeholder="sk-...">
               <button id="activateApiKey" class="btn-small" data-i18n="btn_activate">✓ Активировать</button>
+              <button id="clearApiKey" class="btn-small" title="Очистить API ключ">🗑</button>
             </div>
           </div>
           <div class="field">
@@ -2499,11 +2505,11 @@ async function sendMessage(inputEl, historyEl) {
   const messageWithFiles = text + filesContext;
 
   try {
-    // Fallback: проверяем различные типы вопросов без AI
     const lowerText = text.toLowerCase().trim();
     const isRussian = /[а-яё]/.test(text);
 
-    // Определяем тип вопроса
+    // Fallback ответы только когда AI провайдер НЕ выбран
+    if (!provider || provider === '') {
     const isGreeting = /^(привет|привет!|привет как дела|привет как ты|привет как вы|hello|hi|hey|howdy|greetings)\??!?$/.test(lowerText);
     const isAboutCapabilities = /что ты (умеешь|можешь|делаешь|умеете|можете|делаете)|для чего ты|для чего вы|what can you|what do you do|what can i do|tell me about|расскажи|возможности|capabilities|features|что ты|что я могу|что можно|можно ли/.test(lowerText);
     const isAboutArchitecture = /как (система|приложение|это) (устроена|устроена|работает|функционирует)|как работает|архитектура|устройство|структура|how (does|is) (it|system|app|this) (built|structured|work)|architecture|explain/.test(lowerText);
@@ -2618,15 +2624,14 @@ Connect any AI provider in settings! I'll become a powerful productivity tool.`;
       return;
     }
 
-    // Если AI не подключен и это не про возможности - показываем ошибку
-    if (!provider || provider === '') {
+    // AI не подключен и вопрос не о системе — показываем ошибку
       const msg = isRussian
         ? '⚠️ AI сейчас не подключен. Выберите провайдера в настройках (Ollama, Claude, DeepSeek и др.)\n\n💡 Я могу ответить на вопросы про себя даже без AI!'
         : '⚠️ AI is not connected now. Select a provider in settings (Ollama, Claude, DeepSeek, etc.)\n\n💡 I can answer questions about myself even without AI!';
       appendMsg(msg, 'ai', historyEl);
       typing.remove();
       return;
-    }
+    } // end if (!provider)
 
     // Ollama (офлайн)
     if (provider === 'ollama') {
@@ -2634,16 +2639,43 @@ Connect any AI provider in settings! I'll become a powerful productivity tool.`;
       if (instructions) ollamaMessages.push({ role: 'system', content: instructions });
       ollamaMessages.push({ role: 'user', content: messageWithFiles });
 
+      const shouldStream = document.getElementById('cfgStream')?.checked ?? false;
+
       const resp = await fetch('http://localhost:11434/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, messages: ollamaMessages, stream: false })
+        body: JSON.stringify({ model, messages: ollamaMessages, stream: shouldStream })
       });
       if (!resp.ok) throw new Error('Ollama HTTP ' + resp.status);
-      const data = await resp.json();
-      const reply = data.message?.content || '(пустой ответ)';
-      appendMsg(reply, 'ai', historyEl);
-      if (db) dbPut('messages', { role: 'assistant', content: reply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
+
+      if (shouldStream) {
+        typing.remove();
+        const msgDiv = appendMsg('', 'ai', historyEl);
+        const msgContent = msgDiv.querySelector('.msg-content');
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let fullReply = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const lines = decoder.decode(value, { stream: true }).split('\n').filter(l => l.trim());
+          for (const line of lines) {
+            try {
+              const json = JSON.parse(line);
+              const token = json.message?.content || '';
+              fullReply += token;
+              if (msgContent) msgContent.textContent = fullReply;
+              historyEl.scrollTop = historyEl.scrollHeight;
+            } catch {}
+          }
+        }
+        if (db) dbPut('messages', { role: 'assistant', content: fullReply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
+      } else {
+        const data = await resp.json();
+        const reply = data.message?.content || '(пустой ответ)';
+        appendMsg(reply, 'ai', historyEl);
+        if (db) dbPut('messages', { role: 'assistant', content: reply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
+      }
       return;
     }
 
@@ -2717,6 +2749,9 @@ Connect any AI provider in settings! I'll become a powerful productivity tool.`;
         break;
     }
 
+    const shouldStream = document.getElementById('cfgStream')?.checked ?? false;
+    if (shouldStream) body.stream = true;
+
     const resp = await fetch(apiUrl, {
       method: 'POST',
       headers,
@@ -2728,16 +2763,47 @@ Connect any AI provider in settings! I'll become a powerful productivity tool.`;
       throw new Error(errorData.error?.message || `HTTP ${resp.status}`);
     }
 
-    const data = await resp.json();
-    let reply;
-    if (provider === 'claude') {
-      reply = data.content?.[0]?.text || '(пустой ответ)';
+    if (shouldStream) {
+      typing.remove();
+      const msgDiv = appendMsg('', 'ai', historyEl);
+      const msgContent = msgDiv.querySelector('.msg-content');
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let fullReply = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const lines = decoder.decode(value, { stream: true }).split('\n');
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue;
+          const raw = line.slice(5).trim();
+          if (raw === '[DONE]') continue;
+          try {
+            const json = JSON.parse(raw);
+            let token = '';
+            if (provider === 'claude') {
+              token = json.delta?.text || json.delta?.type === 'text_delta' ? (json.delta?.text || '') : '';
+            } else {
+              token = json.choices?.[0]?.delta?.content || '';
+            }
+            fullReply += token;
+            if (msgContent) msgContent.textContent = fullReply;
+            historyEl.scrollTop = historyEl.scrollHeight;
+          } catch {}
+        }
+      }
+      if (db) dbPut('messages', { role: 'assistant', content: fullReply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
     } else {
-      reply = data.choices?.[0]?.message?.content || '(пустой ответ)';
+      const data = await resp.json();
+      let reply;
+      if (provider === 'claude') {
+        reply = data.content?.[0]?.text || '(пустой ответ)';
+      } else {
+        reply = data.choices?.[0]?.message?.content || '(пустой ответ)';
+      }
+      appendMsg(reply, 'ai', historyEl);
+      if (db) dbPut('messages', { role: 'assistant', content: reply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
     }
-
-    appendMsg(reply, 'ai', historyEl);
-    if (db) dbPut('messages', { role: 'assistant', content: reply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
 
   } catch (e) {
     appendMsg(`❌ Ошибка: ${e.message}`, 'ai', historyEl);
@@ -3151,6 +3217,39 @@ if (activateApiKey) {
     } else {
       showToast('⚠️ Введите API ключ');
     }
+  });
+}
+
+// Очистка API ключа
+const clearApiKeyBtn = document.getElementById('clearApiKey');
+if (clearApiKeyBtn) {
+  clearApiKeyBtn.addEventListener('click', () => {
+    if (cfgApiKey) cfgApiKey.value = '';
+    sessionStorage.removeItem('cfgApiKey');
+    showToast('🗑 API ключ очищен');
+  });
+}
+
+// DuckDuckGo toggle
+const toggleDuckDuckGo = document.getElementById('toggleDuckDuckGo');
+if (toggleDuckDuckGo) {
+  const applyDdgState = (enabled) => {
+    if (enabled) {
+      toggleDuckDuckGo.textContent = '🌐 Поиск активный';
+      toggleDuckDuckGo.style.background = 'rgba(76,175,80,0.3)';
+      toggleDuckDuckGo.style.borderColor = 'rgba(76,175,80,0.6)';
+    } else {
+      toggleDuckDuckGo.textContent = '⚠️ Поиск не активен';
+      toggleDuckDuckGo.style.background = 'rgba(220,53,69,0.3)';
+      toggleDuckDuckGo.style.borderColor = 'rgba(220,53,69,0.6)';
+    }
+  };
+  applyDdgState(sessionStorage.getItem('duckDuckGoEnabled') === 'true');
+  toggleDuckDuckGo.addEventListener('click', () => {
+    const enabled = sessionStorage.getItem('duckDuckGoEnabled') !== 'true';
+    sessionStorage.setItem('duckDuckGoEnabled', String(enabled));
+    applyDdgState(enabled);
+    showToast(enabled ? '🌐 DuckDuckGo поиск включен' : '🔌 DuckDuckGo поиск отключен');
   });
 }
 

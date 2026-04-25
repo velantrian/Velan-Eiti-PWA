@@ -1,5 +1,5 @@
-// sw.js — Velan Eiti Service Worker v1.8.0
-const CACHE_NAME = 'velan-eiti-v1.8.0';
+// sw.js — Velan Eiti Service Worker v1.9.0
+const CACHE_NAME = 'velan-eiti-v1.9.0';
 const BASE_PATH = '/Velan-Eiti-PWA';
 const OFFLINE_URL = BASE_PATH + '/offline.html';
 
