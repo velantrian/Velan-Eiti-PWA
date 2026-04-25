@@ -2,8 +2,8 @@
   "name": "Velan Eiti",
   "short_name": "Velan Eiti",
   "description": "Терминальный AI-клиент · DeepSeek · Claude · Ollama · Агент · Офлайн",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/Velan-Eiti-PWA/",
+  "scope": "/Velan-Eiti-PWA/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#0d0618",
@@ -80,7 +80,7 @@
       "name": "Чат",
       "short_name": "Чат",
       "description": "Открыть чат",
-      "url": "/?panel=chat",
+      "url": "/Velan-Eiti-PWA/?panel=chat",
       "icons": [
         {
           "src": "icons/icon-96x96.png",
@@ -93,7 +93,7 @@
       "name": "Агент",
       "short_name": "Агент",
       "description": "Открыть агента",
-      "url": "/?panel=agent",
+      "url": "/Velan-Eiti-PWA/?panel=agent",
       "icons": [
         {
           "src": "icons/icon-96x96.png",

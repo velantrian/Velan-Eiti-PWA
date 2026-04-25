@@ -1,21 +1,22 @@
-// sw.js — Velan Eiti Service Worker v1.7.0
-const CACHE_NAME = 'velan-eiti-v1.7.0';
-const OFFLINE_URL = '/offline.html';
+// sw.js — Velan Eiti Service Worker v1.8.0
+const CACHE_NAME = 'velan-eiti-v1.8.0';
+const BASE_PATH = '/Velan-Eiti-PWA';
+const OFFLINE_URL = BASE_PATH + '/offline.html';
 
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icons/icon-48x48.png',
-  '/icons/icon-72x72.png',
-  '/icons/icon-96x96.png',
-  '/icons/icon-128x128.png',
-  '/icons/icon-144x144.png',
-  '/icons/icon-152x152.png',
-  '/icons/icon-180x180.png',
-  '/icons/icon-192x192.png',
-  '/icons/icon-256x256.png',
-  '/icons/icon-512x512.png',
+  BASE_PATH + '/',
+  BASE_PATH + '/index.html',
+  BASE_PATH + '/manifest.json',
+  BASE_PATH + '/icons/icon-48x48.png',
+  BASE_PATH + '/icons/icon-72x72.png',
+  BASE_PATH + '/icons/icon-96x96.png',
+  BASE_PATH + '/icons/icon-128x128.png',
+  BASE_PATH + '/icons/icon-144x144.png',
+  BASE_PATH + '/icons/icon-152x152.png',
+  BASE_PATH + '/icons/icon-180x180.png',
+  BASE_PATH + '/icons/icon-192x192.png',
+  BASE_PATH + '/icons/icon-256x256.png',
+  BASE_PATH + '/icons/icon-512x512.png',
   OFFLINE_URL,
 ];
 
@@ -66,7 +67,7 @@ self.addEventListener('fetch', event => {
   }
 
   // index.html и корневой путь — network-first (чтобы обновления применялись сразу)
-  if (url.pathname === '/' || url.pathname === '/index.html') {
+  if (url.pathname === BASE_PATH + '/' || url.pathname === BASE_PATH + '/index.html') {
     event.respondWith(
       fetch(request).then(response => {
         if (response && response.status === 200) {
@@ -119,8 +120,8 @@ self.addEventListener('push', event => {
   event.waitUntil(
     self.registration.showNotification(data.title || '⚡ Velan Eiti', {
       body: data.body || 'Агент завершил задачу',
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-96.png',
+      icon: BASE_PATH + '/icons/icon-192x192.png',
+      badge: BASE_PATH + '/icons/icon-96x96.png',
       vibrate: [200, 100, 200],
       tag: 'agent-notification',
       renotify: true,
@@ -133,7 +134,7 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil(
     self.clients.matchAll({ type: 'window' }).then(clients => {
       if (clients.length) return clients[0].focus();
-      return self.clients.openWindow('/');
+      return self.clients.openWindow(BASE_PATH + '/');
     })
   );
 });
