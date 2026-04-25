@@ -328,6 +328,7 @@
 
 html, body {
   height: 100%;
+  overflow: hidden;
   background: var(--purple-deep);
   color: var(--text);
   font-family: 'Crimson Pro', Georgia, serif;
@@ -353,7 +354,8 @@ body::after {
 /* ── Layout ────────────────────────────────────────────── */
 #app {
   position: relative; z-index: 1;
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
   display: flex; flex-direction: column;
 }
 
@@ -447,7 +449,7 @@ main {
 
 .panel {
   display: none; flex: 1; flex-direction: column;
-  height: calc(100dvh - 110px);
+  min-height: 0;
 }
 .panel.active { display: flex; }
 
