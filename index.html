@@ -1287,6 +1287,22 @@ main {
         </div>
 
         <div class="card">
+          <div class="card-title">📋 Инструкции</div>
+          <p style="font-size:0.85rem;color:var(--text-dim);margin-bottom:15px;line-height:1.5">
+            Задайте как ИИ должен отвечать. Пример: «Отвечай кратко, используй emoji, говори на русском».
+          </p>
+          <div class="field">
+            <label>Инструкции для Чата 💬</label>
+            <textarea id="cfgChatInstructions" rows="4" placeholder="Например: Всегда отвечай кратко и по сути. Вставляй emoji в ответ. Говори только на русском."></textarea>
+          </div>
+          <div class="field">
+            <label>Инструкции для Агента ⚡</label>
+            <textarea id="cfgAgentInstructions" rows="4" placeholder="Например: Ты опытный разработчик. Всегда объясняй свой код. Предлагай оптимизации."></textarea>
+          </div>
+          <button id="saveInstructions" class="btn-small" style="width:100%">💾 Сохранить инструкции</button>
+        </div>
+
+        <div class="card">
           <div class="card-title">⚙ Параметры</div>
           <div class="toggle-row">
             <div>
@@ -1389,6 +1405,10 @@ let deferredInstall = null;
 let activePanel = 'chat';
 let activeChatId = null;
 let activeAgentId = null;
+
+// Токены отмены для предотвращения race condition при переключении чатов
+let chatLoadToken = 0;
+let agentLoadToken = 0;
 
 // Хранилище загруженных файлов для чата и агента
 let chatFiles = [];
@@ -1581,7 +1601,9 @@ async function loadChatSelector() {
 // Загрузка сообщений текущего чата
 async function loadChatMessages() {
   if (!db || !activeChatId) return;
+  const token = ++chatLoadToken;
   const allMessages = await dbGetAll('messages');
+  if (token !== chatLoadToken) return; // устаревший запрос — чат сменился
   const chatMessages = allMessages.filter(m => m.chatId === activeChatId && m.panel === 'chat');
   const historyEl = document.getElementById('chatHistory');
   historyEl.innerHTML = '';
@@ -1682,7 +1704,9 @@ async function loadAgentSelector() {
 // Загрузка сообщений текущего агента
 async function loadAgentMessages() {
   if (!db || !activeAgentId) return;
+  const token = ++agentLoadToken;
   const allMessages = await dbGetAll('messages');
+  if (token !== agentLoadToken) return; // устаревший запрос — агент сменился
   const agentMessages = allMessages.filter(m => m.chatId === activeAgentId && m.panel === 'agent');
   const historyEl = document.getElementById('agentHistory');
   historyEl.innerHTML = '';
@@ -1821,22 +1845,21 @@ async function findRelevantChunks(query, maxChunks = 5) {
   // Приводим запрос к нижнему регистру и разбиваем на слова
   const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
   
+  const lowerQuery = query.toLowerCase();
+
   // Оцениваем релевантность каждого чанка
   const scoredChunks = allChunks.map(chunk => {
     const content = chunk.content.toLowerCase();
     let score = 0;
-    
+
+    // Бонус за точное совпадение фразы (один раз на чанк, не внутри цикла)
+    if (content.includes(lowerQuery)) score += 20;
+
     queryWords.forEach(word => {
-      // Подсчитываем количество вхождений слова
       const matches = content.split(word).length - 1;
       score += matches * 10;
-      
-      // Бонус за точное совпадение фразы
-      if (content.includes(query.toLowerCase())) {
-        score += 20;
-      }
     });
-    
+
     return { ...chunk, score };
   });
   
@@ -1987,26 +2010,25 @@ document.getElementById('chatAttachBtn').addEventListener('click', () => {
 document.getElementById('chatFileInput').addEventListener('change', async (e) => {
   const files = Array.from(e.target.files);
   if (!files.length) return;
-  
+
+  let loaded = 0;
   for (const file of files) {
-    const content = await readFileAsText(file);
-    const fileData = {
-      id: Date.now() + Math.random(),
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      content: content,
-      uploaded: Date.now()
-    };
-    chatFiles.push(fileData);
-    
-    // Создаем чанки для файла
-    const chunks = splitTextIntoChunks(content, file.name);
-    await saveChunks(chunks);
+    if (file.size > MAX_FILE_SIZE) {
+      showToast(`⚠️ ${file.name} — слишком большой (макс. 20 МБ)`);
+      continue;
+    }
+    try {
+      const content = await readFileAsText(file);
+      chatFiles.push({ id: Date.now() + Math.random(), name: file.name, type: file.type, size: file.size, content, uploaded: Date.now() });
+      await saveChunks(splitTextIntoChunks(content, file.name));
+      loaded++;
+    } catch (err) {
+      showToast(`❌ Не удалось прочитать ${file.name}`);
+    }
   }
-  
-  renderFilesList('chat');
-  showToast(`📎 Загружено ${files.length} файл(ов) с чанками`);
+
+  if (loaded) renderFilesList('chat');
+  if (loaded) showToast(`📎 Загружено ${loaded} файл(ов)`);
   e.target.value = '';
 });
 
@@ -2022,36 +2044,37 @@ document.getElementById('agentAttachBtn').addEventListener('click', () => {
 document.getElementById('agentFileInput').addEventListener('change', async (e) => {
   const files = Array.from(e.target.files);
   if (!files.length) return;
-  
+
+  let loaded = 0;
   for (const file of files) {
-    const content = await readFileAsText(file);
-    const fileData = {
-      id: Date.now() + Math.random(),
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      content: content,
-      ts: Date.now()
-    };
-    agentFiles.push(fileData);
-    
-    // Создаем чанки для файла
-    const chunks = splitTextIntoChunks(content, file.name);
-    await saveChunks(chunks);
+    if (file.size > MAX_FILE_SIZE) {
+      showToast(`⚠️ ${file.name} — слишком большой (макс. 20 МБ)`);
+      continue;
+    }
+    try {
+      const content = await readFileAsText(file);
+      agentFiles.push({ id: Date.now() + Math.random(), name: file.name, type: file.type, size: file.size, content, ts: Date.now() });
+      await saveChunks(splitTextIntoChunks(content, file.name));
+      loaded++;
+    } catch (err) {
+      showToast(`❌ Не удалось прочитать ${file.name}`);
+    }
   }
-  
-  renderFilesList('agent');
-  showToast(`📎 Загружено ${files.length} файл(ов) с чанками`);
+
+  if (loaded) renderFilesList('agent');
+  if (loaded) showToast(`📎 Загружено ${loaded} файл(ов)`);
   e.target.value = '';
 });
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 МБ
 
 // Чтение файла как текст
 function readFileAsText(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsText(file);
+    reader.onerror = () => reject(new Error(`Ошибка чтения файла ${file.name}`));
+    reader.readAsText(file, 'UTF-8');
   });
 }
 
@@ -2136,78 +2159,102 @@ async function sendMessage(inputEl, historyEl) {
   const model    = document.getElementById('cfgModel').value;
   const apiKey   = sessionStorage.getItem('cfgApiKey');
 
+  // Инструкции для текущей панели
+  const instructions = activePanel === 'agent'
+    ? (document.getElementById('cfgAgentInstructions').value.trim())
+    : (document.getElementById('cfgChatInstructions').value.trim());
+
   // Добавляем контекст файлов с использованием чанков
   const filesContext = await getFilesContext(activePanel, text);
   const messageWithFiles = text + filesContext;
 
-  // Ollama (офлайн)
-  if (provider === 'ollama') {
-    try {
+  try {
+    // Ollama (офлайн)
+    if (provider === 'ollama') {
+      const ollamaMessages = [];
+      if (instructions) ollamaMessages.push({ role: 'system', content: instructions });
+      ollamaMessages.push({ role: 'user', content: messageWithFiles });
+
       const resp = await fetch('http://localhost:11434/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model,
-          messages: [{ role: 'user', content: messageWithFiles }],
-          stream: false
-        })
+        body: JSON.stringify({ model, messages: ollamaMessages, stream: false })
       });
-      if (resp.ok) {
-        const data = await resp.json();
-        typing.remove();
-        const reply = data.message?.content || '(пустой ответ)';
-        appendMsg(reply, 'ai', historyEl);
-        if (db) dbPut('messages', { role: 'assistant', content: reply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
-        return;
-      }
-    } catch (e) {
-      typing.remove();
-      appendMsg('❌ Ollama недоступен. Убедитесь что запущен <code>ollama serve</code>', 'ai', historyEl);
+      if (!resp.ok) throw new Error('Ollama HTTP ' + resp.status);
+      const data = await resp.json();
+      const reply = data.message?.content || '(пустой ответ)';
+      appendMsg(reply, 'ai', historyEl);
+      if (db) dbPut('messages', { role: 'assistant', content: reply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
       return;
     }
-  }
 
-  // Внешние API (DeepSeek, Claude, OpenAI, Groq, OpenRouter)
-  if (!apiKey) {
-    typing.remove();
-    appendMsg('❌ API Key не установлен. Введите ключ в настройках и нажмите "Активировать".', 'ai', historyEl);
-    return;
-  }
+    // Внешние API (DeepSeek, Claude, OpenAI, Groq, OpenRouter)
+    if (!apiKey) {
+      appendMsg('❌ API Key не установлен. Введите ключ в настройках и нажмите "Активировать".', 'ai', historyEl);
+      return;
+    }
 
-  if (!navigator.onLine) {
-    typing.remove();
-    appendMsg('❌ Нет интернет-соединения. Для работы с внешними API нужна сеть.', 'ai', historyEl);
-    return;
-  }
+    if (!navigator.onLine) {
+      appendMsg('❌ Нет интернет-соединения. Для работы с внешними API нужна сеть.', 'ai', historyEl);
+      return;
+    }
 
-  try {
     let apiUrl, headers, body;
 
     switch (provider) {
       case 'deepseek':
         apiUrl = 'https://api.deepseek.com/v1/chat/completions';
         headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
-        body = { model, messages: [{ role: 'user', content: messageWithFiles }] };
+        body = {
+          model,
+          messages: [
+            ...(instructions ? [{ role: 'system', content: instructions }] : []),
+            { role: 'user', content: messageWithFiles }
+          ]
+        };
         break;
       case 'claude':
         apiUrl = 'https://api.anthropic.com/v1/messages';
         headers = { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' };
-        body = { model, max_tokens: 4096, messages: [{ role: 'user', content: messageWithFiles }] };
+        body = {
+          model,
+          max_tokens: 4096,
+          ...(instructions ? { system: instructions } : {}),
+          messages: [{ role: 'user', content: messageWithFiles }]
+        };
         break;
       case 'openai':
         apiUrl = 'https://api.openai.com/v1/chat/completions';
         headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
-        body = { model, messages: [{ role: 'user', content: messageWithFiles }] };
+        body = {
+          model,
+          messages: [
+            ...(instructions ? [{ role: 'system', content: instructions }] : []),
+            { role: 'user', content: messageWithFiles }
+          ]
+        };
         break;
       case 'groq':
         apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
         headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
-        body = { model, messages: [{ role: 'user', content: messageWithFiles }] };
+        body = {
+          model,
+          messages: [
+            ...(instructions ? [{ role: 'system', content: instructions }] : []),
+            { role: 'user', content: messageWithFiles }
+          ]
+        };
         break;
       case 'openrouter':
         apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
         headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
-        body = { model, messages: [{ role: 'user', content: messageWithFiles }] };
+        body = {
+          model,
+          messages: [
+            ...(instructions ? [{ role: 'system', content: instructions }] : []),
+            { role: 'user', content: messageWithFiles }
+          ]
+        };
         break;
     }
 
@@ -2223,21 +2270,20 @@ async function sendMessage(inputEl, historyEl) {
     }
 
     const data = await resp.json();
-    typing.remove();
-    
     let reply;
     if (provider === 'claude') {
       reply = data.content?.[0]?.text || '(пустой ответ)';
     } else {
       reply = data.choices?.[0]?.message?.content || '(пустой ответ)';
     }
-    
+
     appendMsg(reply, 'ai', historyEl);
     if (db) dbPut('messages', { role: 'assistant', content: reply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
-    
+
   } catch (e) {
+    appendMsg(`❌ Ошибка: ${e.message}`, 'ai', historyEl);
+  } finally {
     typing.remove();
-    appendMsg(`❌ Ошибка API: ${e.message}`, 'ai', historyEl);
   }
 }
 
@@ -2417,10 +2463,12 @@ async function loadConfig() {
   if (cfg.model)    document.getElementById('cfgModel').value    = cfg.model;
   if (cfg.theme)    document.getElementById('cfgTheme').value    = cfg.theme;
   if (cfg.thinking !== undefined) document.getElementById('cfgThinking').checked = cfg.thinking;
-  
+  if (cfg.chatInstructions) document.getElementById('cfgChatInstructions').value = cfg.chatInstructions;
+  if (cfg.agentInstructions) document.getElementById('cfgAgentInstructions').value = cfg.agentInstructions;
+
   // Применяем тему
   applyTheme(cfg.theme || 'midnight');
-  
+
   // API ключ из sessionStorage (безопаснее чем IndexedDB)
   const apiKey = sessionStorage.getItem('cfgApiKey');
   if (apiKey) document.getElementById('cfgApiKey').value = apiKey;
@@ -2558,6 +2606,15 @@ async function cleanupOldMessages() {
   document.getElementById(id).addEventListener('change', e => {
     saveConfigField(id.replace('cfg','').toLowerCase(), e.target.checked);
   });
+});
+
+// Инструкции — сохранение
+document.getElementById('saveInstructions').addEventListener('click', () => {
+  const chatInstr = document.getElementById('cfgChatInstructions').value.trim();
+  const agentInstr = document.getElementById('cfgAgentInstructions').value.trim();
+  saveConfigField('chatInstructions', chatInstr);
+  saveConfigField('agentInstructions', agentInstr);
+  showToast('✅ Инструкции сохранены');
 });
 
 // API Key в sessionStorage
