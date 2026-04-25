@@ -563,6 +563,11 @@ main {
 }
 .msg-action-btn:hover { opacity: 1; }
 
+.msg-edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .msg-content {
   word-wrap: break-word;
 }
@@ -2036,12 +2041,18 @@ function appendMsg(text, role, container) {
       ${role === 'user' ? '👤 Вы' : '⚡ Velan Eiti'} · ${now}
       <div class="msg-actions">
         ${role === 'user'
-          ? `<button class="msg-action-btn" onclick="editMessage('${msgId}')" title="Редактировать">↩️</button><button class="msg-action-btn" onclick="resendMessage('${msgId}')" title="Отправить заново">📤</button>`
-          : `<button class="msg-action-btn" onclick="copyMessage('${msgId}')" title="Копировать">📋</button><button class="msg-action-btn" onclick="speakMessage('${msgId}')" title="Озвучить">🔊</button>`
+          ? `<button class="msg-action-btn" onclick="toggleEditMode('${msgId}')" title="Редактировать">✏️</button>`
+          : ``
         }
+        <button class="msg-action-btn" onclick="copyMessage('${msgId}')" title="Копировать">📋</button>
+        <button class="msg-action-btn" onclick="speakMessage('${msgId}')" title="Озвучить">🔊</button>
       </div>
     </div>
     <div id="${msgId}" class="msg-content">${processedText}</div>
+    <div id="${msgId}-edit-actions" class="msg-edit-actions" style="display:none;margin-top:8px;gap:6px;">
+      <button class="msg-action-btn" onclick="cancelEdit('${msgId}')" title="Отмена">↩️</button>
+      <button class="msg-action-btn" onclick="confirmEdit('${msgId}')" title="Отправить">📤</button>
+    </div>
   `;
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
@@ -2074,30 +2085,58 @@ function showTyping(container) {
   return div;
 }
 
-// Редактирование пользовательского сообщения
-function editMessage(msgId) {
+// Включение режима редактирования сообщения
+function toggleEditMode(msgId) {
   const msgEl = document.getElementById(msgId);
-  if (!msgEl) return;
-  const text = msgEl.innerText || msgEl.textContent;
-  const inputEl = activePanel === 'chat' ? document.getElementById('chatInput') : document.getElementById('agentInput');
-  if (inputEl) {
-    inputEl.value = text;
-    inputEl.focus();
-    inputEl.style.height = 'auto';
-    inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
-    showToast('✏️ Отредактируйте и отправьте заново');
-  }
+  const editActionsEl = document.getElementById(`${msgId}-edit-actions`);
+  if (!msgEl || !editActionsEl) return;
+
+  const originalText = msgEl.innerText || msgEl.textContent;
+  msgEl.contentEditable = true;
+  msgEl.style.background = 'rgba(201,149,42,0.15)';
+  msgEl.style.padding = '8px 10px';
+  msgEl.style.borderRadius = '6px';
+  msgEl.style.border = '1px solid rgba(201,149,42,0.3)';
+  msgEl.focus();
+  msgEl.dataset.originalText = originalText;
+
+  editActionsEl.style.display = 'flex';
 }
 
-// Переотправка сообщения
-async function resendMessage(msgId) {
+// Отмена редактирования
+function cancelEdit(msgId) {
   const msgEl = document.getElementById(msgId);
-  if (!msgEl) return;
-  const text = msgEl.innerText || msgEl.textContent;
+  const editActionsEl = document.getElementById(`${msgId}-edit-actions`);
+  if (!msgEl || !editActionsEl) return;
+
+  msgEl.contentEditable = false;
+  msgEl.innerText = msgEl.dataset.originalText;
+  msgEl.style.background = '';
+  msgEl.style.padding = '';
+  msgEl.style.borderRadius = '';
+  msgEl.style.border = '';
+  editActionsEl.style.display = 'none';
+  showToast('❌ Редактирование отменено');
+}
+
+// Подтверждение и отправка отредактированного сообщения
+async function confirmEdit(msgId) {
+  const msgEl = document.getElementById(msgId);
+  const editActionsEl = document.getElementById(`${msgId}-edit-actions`);
+  if (!msgEl || !editActionsEl) return;
+
+  const editedText = msgEl.innerText || msgEl.textContent;
+  msgEl.contentEditable = false;
+  msgEl.style.background = '';
+  msgEl.style.padding = '';
+  msgEl.style.borderRadius = '';
+  msgEl.style.border = '';
+  editActionsEl.style.display = 'none';
+
   const historyEl = activePanel === 'chat' ? document.getElementById('chatHistory') : document.getElementById('agentHistory');
   const inputEl = activePanel === 'chat' ? document.getElementById('chatInput') : document.getElementById('agentInput');
   if (inputEl && historyEl) {
-    inputEl.value = text;
+    inputEl.value = editedText;
     await sendMessage(inputEl, historyEl);
   }
 }
