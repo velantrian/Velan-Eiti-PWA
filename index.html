@@ -2513,9 +2513,12 @@ async function sendMessage(inputEl, historyEl) {
   const messageWithFiles = text + filesContext;
 
   try {
-    // Fallback: проверяем различные типы вопросов без AI
-    const lowerText = text.toLowerCase().trim();
-    const isRussian = /[а-яё]/.test(text);
+
+    // Проверяем есть ли подключенный AI ПЕРЕД fallback
+    if (!provider || provider === '') {
+      // Fallback: проверяем различные типы вопросов без AI
+      const lowerText = text.toLowerCase().trim();
+      const isRussian = /[а-яё]/.test(text);
 
     // Определяем тип вопроса
     const isGreeting = /^(привет|привет!|привет как дела|привет как ты|привет как вы|hello|hi|hey|howdy|greetings)\??!?$/.test(lowerText);
@@ -2632,14 +2635,13 @@ Connect any AI provider in settings! I'll become a powerful productivity tool.`;
       return;
     }
 
-    // Если AI не подключен и это не про возможности - показываем ошибку
-    if (!provider || provider === '') {
-      const msg = isRussian
-        ? '⚠️ AI сейчас не подключен. Выберите провайдера в настройках (Ollama, Claude, DeepSeek и др.)\n\n💡 Я могу ответить на вопросы про себя даже без AI!'
-        : '⚠️ AI is not connected now. Select a provider in settings (Ollama, Claude, DeepSeek, etc.)\n\n💡 I can answer questions about myself even without AI!';
-      appendMsg(msg, 'ai', historyEl);
-      typing.remove();
-      return;
+    // Если AI не подключен и это не про возможности/архитектуру - показываем ошибку
+    const msg = isRussian
+      ? '⚠️ AI сейчас не подключен. Выберите провайдера в настройках (Ollama, Claude, DeepSeek и др.)\n\n💡 Я могу ответить на вопросы про себя даже без AI!'
+      : '⚠️ AI is not connected now. Select a provider in settings (Ollama, Claude, DeepSeek, etc.)\n\n💡 I can answer questions about myself even without AI!';
+    appendMsg(msg, 'ai', historyEl);
+    typing.remove();
+    return;
     }
 
     // Ollama (офлайн)
