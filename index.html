@@ -1681,14 +1681,18 @@ async function loadChatSelector() {
   if (!db) return;
   const chats = await dbGetAll('chats');
   const selector = document.getElementById('chatSelector');
+  const chatHeader = document.querySelector('#panel-chat .chat-header');
   selector.innerHTML = '';
 
   if (!chats.length) {
+    if (chatHeader) chatHeader.style.display = 'none';
     return;
   }
-  
+
+  if (chatHeader) chatHeader.style.display = '';
+
   chats.sort((a, b) => (b.updated || 0) - (a.updated || 0));
-  
+
   chats.forEach(chat => {
     const option = document.createElement('option');
     option.value = chat.id;
@@ -1696,7 +1700,7 @@ async function loadChatSelector() {
     if (chat.id === activeChatId) option.selected = true;
     selector.appendChild(option);
   });
-  
+
   if (!activeChatId && chats.length) {
     activeChatId = chats[0].id;
     await loadChatMessages();
@@ -1779,14 +1783,18 @@ async function loadAgentSelector() {
   if (!db) return;
   const agents = await dbGetAll('agents');
   const selector = document.getElementById('agentSelector');
+  const agentHeader = document.querySelector('#panel-agent .chat-header');
   selector.innerHTML = '';
 
   if (!agents.length) {
+    if (agentHeader) agentHeader.style.display = 'none';
     return;
   }
-  
+
+  if (agentHeader) agentHeader.style.display = '';
+
   agents.sort((a, b) => (b.updated || 0) - (a.updated || 0));
-  
+
   agents.forEach(agent => {
     const option = document.createElement('option');
     option.value = agent.id;
@@ -1794,7 +1802,7 @@ async function loadAgentSelector() {
     if (agent.id === activeAgentId) option.selected = true;
     selector.appendChild(option);
   });
-  
+
   if (!activeAgentId && agents.length) {
     activeAgentId = agents[0].id;
     await loadAgentMessages();
