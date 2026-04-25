@@ -1380,10 +1380,24 @@ main {
             </select>
           </div>
           <div class="field">
+            <label>Подключить интернет</label>
+            <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg-secondary);border-radius:6px;border:1px solid var(--border)">
+              <div style="flex:1">
+                <div style="font-size:0.9rem;color:var(--text);margin-bottom:4px">🌐 DuckDuckGo поиск</div>
+                <div style="font-size:0.8rem;color:var(--text-dim)">Бесплатный интернет поиск для контекста</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                <button id="toggleDuckDuckGo" class="btn-small" style="padding:8px 12px;background:rgba(200,0,0,0.2);border-color:rgba(200,0,0,0.4);white-space:nowrap">⚠️ Поиск не активен</button>
+                <div id="duckDuckGoStatus" style="font-size:0.75rem;color:var(--text-dim)">отключено</div>
+              </div>
+            </div>
+          </div>
+          <div class="field">
             <label>API Key</label>
             <div class="input-with-btn">
               <input type="password" id="cfgApiKey" placeholder="sk-...">
               <button id="activateApiKey" class="btn-small" data-i18n="btn_activate">✓ Активировать</button>
+              <button id="clearApiKey" class="btn-small" title="Очистить API ключ">🗑</button>
             </div>
           </div>
           <div class="field">
@@ -2634,16 +2648,54 @@ Connect any AI provider in settings! I'll become a powerful productivity tool.`;
       if (instructions) ollamaMessages.push({ role: 'system', content: instructions });
       ollamaMessages.push({ role: 'user', content: messageWithFiles });
 
+      const shouldStream = document.getElementById('cfgStream')?.checked ?? true;
+
       const resp = await fetch('http://localhost:11434/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, messages: ollamaMessages, stream: false })
+        body: JSON.stringify({ model, messages: ollamaMessages, stream: shouldStream })
       });
       if (!resp.ok) throw new Error('Ollama HTTP ' + resp.status);
-      const data = await resp.json();
-      const reply = data.message?.content || '(пустой ответ)';
-      appendMsg(reply, 'ai', historyEl);
-      if (db) dbPut('messages', { role: 'assistant', content: reply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
+
+      if (shouldStream) {
+        let fullReply = '';
+        appendMsg('...', 'ai', historyEl);
+        const msgEl = historyEl.lastElementChild;
+
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines[lines.length - 1];
+
+          for (let i = 0; i < lines.length - 1; i++) {
+            const line = lines[i].trim();
+            if (line) {
+              try {
+                const chunk = JSON.parse(line);
+                if (chunk.message?.content) {
+                  fullReply += chunk.message.content;
+                  msgEl.textContent = fullReply;
+                  manualScroll = false;
+                  setTimeout(() => { historyEl.scrollTop = historyEl.scrollHeight; }, 0);
+                }
+              } catch (e) {}
+            }
+          }
+        }
+        if (db) dbPut('messages', { role: 'assistant', content: fullReply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
+      } else {
+        const data = await resp.json();
+        const reply = data.message?.content || '(пустой ответ)';
+        appendMsg(reply, 'ai', historyEl);
+        if (db) dbPut('messages', { role: 'assistant', content: reply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
+      }
       return;
     }
 
@@ -3151,6 +3203,46 @@ if (activateApiKey) {
     } else {
       showToast('⚠️ Введите API ключ');
     }
+  });
+}
+
+const clearApiKeyBtn = document.getElementById('clearApiKey');
+if (clearApiKeyBtn) {
+  clearApiKeyBtn.addEventListener('click', () => {
+    cfgApiKey.value = '';
+    sessionStorage.removeItem('cfgApiKey');
+    showToast('🗑 API ключ очищен');
+  });
+}
+
+const toggleDuckDuckGo = document.getElementById('toggleDuckDuckGo');
+const duckDuckGoStatus = document.getElementById('duckDuckGoStatus');
+if (toggleDuckDuckGo && duckDuckGoStatus) {
+  const isDuckDuckGoEnabled = () => sessionStorage.getItem('duckDuckGoEnabled') === 'true';
+
+  const updateDuckDuckGoUI = () => {
+    if (isDuckDuckGoEnabled()) {
+      toggleDuckDuckGo.textContent = '🌐 Поиск активный';
+      toggleDuckDuckGo.style.background = 'rgba(76, 175, 80, 0.3)';
+      toggleDuckDuckGo.style.borderColor = 'rgba(76, 175, 80, 0.6)';
+      duckDuckGoStatus.textContent = 'включено';
+      duckDuckGoStatus.style.color = 'rgba(76, 175, 80, 0.8)';
+    } else {
+      toggleDuckDuckGo.textContent = '⚠️ Поиск не активен';
+      toggleDuckDuckGo.style.background = 'rgba(200, 0, 0, 0.2)';
+      toggleDuckDuckGo.style.borderColor = 'rgba(200, 0, 0, 0.4)';
+      duckDuckGoStatus.textContent = 'отключено';
+      duckDuckGoStatus.style.color = 'var(--text-dim)';
+    }
+  };
+
+  updateDuckDuckGoUI();
+
+  toggleDuckDuckGo.addEventListener('click', () => {
+    const newState = !isDuckDuckGoEnabled();
+    sessionStorage.setItem('duckDuckGoEnabled', newState);
+    updateDuckDuckGoUI();
+    showToast(newState ? '🌐 DuckDuckGo поиск активирован' : '⚠️ DuckDuckGo поиск отключен');
   });
 }
 
