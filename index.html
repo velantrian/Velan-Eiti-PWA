@@ -2355,6 +2355,69 @@ async function sendMessage(inputEl, historyEl) {
   const messageWithFiles = text + filesContext;
 
   try {
+    // Fallback: проверяем вопросы про возможности системы
+    const lowerText = text.toLowerCase();
+    const isAboutCapabilities = /что ты (умеешь|можешь|делаешь|умеете|можете|делаете)|what can you|what do you do|tell me about|расскажи|возможности|capabilities|features/.test(lowerText);
+
+    if (isAboutCapabilities) {
+      const isRussian = /[а-яё]/.test(text);
+      let fallbackReply = '';
+
+      if (isRussian) {
+        fallbackReply = `🎯 Вот что я могу делать:
+
+📝 **Чат** — разговариваю с любым AI (Claude, DeepSeek, OpenAI, Groq, OpenRouter или локально Ollama)
+
+⚡ **Агент** — выполняю сложные задачи пошагово: читаю файлы, пишу код, запускаю команды и докладываю результаты
+
+🧠 **Память** — сохраняю ключевые факты и данные (key-value хранилище) для контекста между чатами
+
+📜 **История** — все чаты и агентские сессии доступны в архиве
+
+📁 **Файлы** — загружаю PDF, TXT, DOCX, изображения; использую RAG (поиск релевантных кусков) в ответах
+
+⚙️ **Настройки** — выбираю AI провайдера, модель, язык, тему оформления (13 тем!)
+
+💾 **Офлайн** — работаю полностью в браузере через IndexedDB; могу работать локально через Ollama без интернета
+
+Для большего потенциала подключите AI провайдера в настройках! 🚀`;
+      } else {
+        fallbackReply = `🎯 Here's what I can do:
+
+📝 **Chat** — talk with any AI (Claude, DeepSeek, OpenAI, Groq, OpenRouter or local Ollama)
+
+⚡ **Agent** — execute complex tasks step-by-step: read files, write code, run commands and report results
+
+🧠 **Memory** — save key facts and data (key-value storage) for context between chats
+
+📜 **History** — all chats and agent sessions available in the archive
+
+📁 **Files** — upload PDF, TXT, DOCX, images; use RAG (retrieve relevant chunks) in responses
+
+⚙️ **Settings** — choose AI provider, model, language, theme (13 themes!)
+
+💾 **Offline** — work fully in browser via IndexedDB; can work locally via Ollama without internet
+
+Connect an AI provider in settings for full potential! 🚀`;
+      }
+
+      appendMsg(fallbackReply, 'ai', historyEl);
+      if (db) dbPut('messages', { role: 'assistant', content: fallbackReply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
+      typing.remove();
+      return;
+    }
+
+    // Если AI не подключен и это не про возможности - показываем ошибку
+    if (!provider || provider === '') {
+      const isRussian = /[а-яё]/.test(text);
+      const msg = isRussian
+        ? '⚠️ AI сейчас не подключен. Выберите провайдера в настройках (Ollama, Claude, DeepSeek и др.)'
+        : '⚠️ AI is not connected now. Select a provider in settings (Ollama, Claude, DeepSeek, etc.)';
+      appendMsg(msg, 'ai', historyEl);
+      typing.remove();
+      return;
+    }
+
     // Ollama (офлайн)
     if (provider === 'ollama') {
       const ollamaMessages = [];
