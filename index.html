@@ -495,6 +495,19 @@ main {
 .chat-history {
   flex: 1; overflow-y: auto; padding: 20px 16px;
   display: flex; flex-direction: column; gap: 14px;
+  background: var(--purple-deep);
+}
+
+/* Fullscreen: keep theme background, not browser black */
+#chatHistory:fullscreen,
+#chatHistory:-webkit-full-screen,
+#agentHistory:fullscreen,
+#agentHistory:-webkit-full-screen {
+  background: var(--purple-deep);
+  color: var(--text);
+  padding: 20px 16px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px;
 }
 
 /* custom scrollbar */
