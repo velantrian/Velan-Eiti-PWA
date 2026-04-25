@@ -751,32 +751,58 @@ main {
 }
 .btn-small {
   padding: 8px 12px;
-  background: rgba(201,149,42,0.3);
-  border: 1px solid rgba(201,149,42,0.5);
+  background: linear-gradient(to bottom, rgba(201,149,42,0.48), rgba(201,149,42,0.26));
+  border: 1px solid rgba(201,149,42,0.58);
   border-radius: 8px;
   color: var(--gold);
   font-size: 0.85rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
   white-space: nowrap;
-  font-weight: 500;
+  font-weight: 600;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.14);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.18);
 }
 .btn-small:hover {
-  background: rgba(201,149,42,0.45);
-  border-color: rgba(201,149,42,0.7);
+  background: linear-gradient(to bottom, rgba(201,149,42,0.6), rgba(201,149,42,0.38));
+  border-color: rgba(201,149,42,0.78);
+  box-shadow: 0 3px 7px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.14);
 }
 .btn-small:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.22);
+}
+
+/* btn-small on light backgrounds */
+[data-theme="light"] .btn-small,
+[data-theme="azure"] .btn-small {
+  background: linear-gradient(to bottom, rgba(0,122,255,0.2), rgba(0,122,255,0.1));
+  border: 1px solid rgba(0,122,255,0.65);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.9);
+  text-shadow: none;
+}
+[data-theme="light"] .btn-small:hover,
+[data-theme="azure"] .btn-small:hover {
+  background: linear-gradient(to bottom, rgba(0,122,255,0.3), rgba(0,122,255,0.16));
+  box-shadow: 0 3px 7px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.9);
 }
 
 .btn-danger {
-  background: rgba(255,100,100,0.35) !important;
-  border-color: rgba(255,100,100,0.55) !important;
-  color: rgba(255,150,150,0.95) !important;
+  background: linear-gradient(to bottom, #e85050, #c0312b) !important;
+  border: 1px solid #a82520 !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.35);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.18) !important;
 }
 .btn-danger:hover {
-  background: rgba(255,100,100,0.5) !important;
-  border-color: rgba(255,100,100,0.7) !important;
+  background: linear-gradient(to bottom, #f06060, #cc3830) !important;
+  border-color: #b52a24 !important;
+  box-shadow: 0 3px 7px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.18) !important;
+}
+.btn-danger:active {
+  background: linear-gradient(to bottom, #c0312b, #e85050) !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3) !important;
+  transform: scale(0.97);
 }
 
 .toggle-row {
@@ -788,25 +814,32 @@ main {
 .toggle-label { font-size: 0.9rem; }
 .toggle-sub { font-size: 0.72rem; color: var(--text-dim); margin-top: 2px; }
 
-/* toggle switch */
+/* toggle switch – skeuomorphic 3D */
 .toggle {
   position: relative; width: 44px; height: 24px; flex-shrink: 0;
 }
 .toggle input { opacity: 0; width: 0; height: 0; }
 .toggle-track {
   position: absolute; inset: 0; border-radius: 12px;
-  background: var(--toggle-track-bg);
-  cursor: pointer; transition: background 0.3s;
+  background: linear-gradient(to bottom, #888, #b0b0b0);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.15);
+  cursor: pointer; transition: background 0.25s, box-shadow 0.25s;
 }
 .toggle-track::after {
   content: ''; position: absolute;
   width: 18px; height: 18px; left: 3px; top: 3px;
-  border-radius: 50%; background: var(--text-dim);
-  transition: transform 0.3s, background 0.3s;
+  border-radius: 50%;
+  background: linear-gradient(155deg, #ffffff 0%, #ececec 55%, #dcdcdc 100%);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,1);
+  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
 }
-.toggle input:checked + .toggle-track { background: rgba(201,149,42,0.5); }
+.toggle input:checked + .toggle-track {
+  background: linear-gradient(to bottom, #2a8c3e, #3db856);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.1);
+}
 .toggle input:checked + .toggle-track::after {
-  transform: translateX(20px); background: var(--gold);
+  transform: translateX(20px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,1);
 }
 
 /* ── Search highlight ─────────────────────────────────────── */
@@ -1308,6 +1341,31 @@ main {
         </div>
 
         <div class="card">
+          <div class="card-title" id="sysInfoToggle" style="cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between">
+            <span>🔍 О системе</span>
+            <span id="sysInfoArrow" style="font-size:0.75rem;transition:transform 0.25s">▼</span>
+          </div>
+          <p style="font-size:0.82rem;color:var(--text-dim);margin-bottom:10px;line-height:1.5">
+            Нажмите, чтобы увидеть архитектуру приложения. ИИ также получает эту информацию в системном контексте.
+          </p>
+          <div id="sysInfoBody" style="display:none">
+            <div style="font-size:0.82rem;line-height:1.7;color:var(--text)">
+              <p style="color:var(--gold);font-weight:600;margin-bottom:8px">VELAN EITI v1.6.0 — PWA-приложение для работы с AI</p>
+              <p style="margin-bottom:6px"><strong>Frontend:</strong> Чистый HTML/CSS/JS без фреймворков. Один файл <code>index.html</code>, встроенный CSS и JS.</p>
+              <p style="margin-bottom:6px"><strong>Хранилище:</strong> IndexedDB — базы: <code>chats</code>, <code>messages</code>, <code>memory</code>, <code>files</code>, <code>config</code>. Данные живут в браузере.</p>
+              <p style="margin-bottom:6px"><strong>AI провайдеры:</strong> Ollama (офлайн, localhost:11434), Claude (Anthropic), OpenAI, DeepSeek, Groq, OpenRouter.</p>
+              <p style="margin-bottom:6px"><strong>Режимы:</strong> Чат (история сообщений по сессиям), Агент (пошаговые задачи), Память (key-value хранилище подсказок), История, Файлы, Настройки.</p>
+              <p style="margin-bottom:6px"><strong>PWA:</strong> Service Worker (<code>sw.js</code>), манифест (<code>manifest.json</code>), устанавливается на экран. Офлайн работает через Ollama.</p>
+              <p style="margin-bottom:6px"><strong>Темы:</strong> 13 цветовых тем (тёмные + светлые), переключаются через <code>data-theme</code> на <code>body</code>.</p>
+              <p style="margin-bottom:6px"><strong>Файлы:</strong> Загрузка документов (PDF, TXT, DOCX, изображений), векторный поиск через чанки для RAG-контекста.</p>
+              <p style="color:var(--text-dim);font-size:0.78rem;margin-top:10px;padding-top:10px;border-top:1px solid var(--toggle-border)">
+                💡 ИИ видит эту информацию через системный промпт и может давать советы по улучшению приложения.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-title">⚙ Параметры</div>
           <div class="toggle-row">
             <div>
@@ -1531,17 +1589,40 @@ async function checkOllama() {
 }
 checkOllama();
 
+// ── Panel switcher (shared, supports History API) ────────────────────────
+function switchPanel(panel, push = true) {
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  const tab = document.querySelector(`.mode-tab[data-panel="${panel}"]`);
+  const panelEl = document.getElementById('panel-' + panel);
+  if (!tab || !panelEl) return;
+  tab.classList.add('active');
+  panelEl.classList.add('active');
+  activePanel = panel;
+  if (panel === 'memory') loadMemory();
+  if (panel === 'history') { if (typeof loadHistory === 'function') loadHistory(); }
+  if (panel === 'files') { if (typeof updateStats === 'function') updateStats(); }
+  if (push) history.pushState({ panel }, '', '#' + panel);
+}
+
 // ── Tab navigation ───────────────────────────────────────────────────────
 document.querySelectorAll('.mode-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    const panel = tab.dataset.panel;
-    document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('panel-' + panel).classList.add('active');
-    activePanel = panel;
-    if (panel === 'memory') loadMemory();
-  });
+  tab.addEventListener('click', () => switchPanel(tab.dataset.panel));
+});
+
+// Android back button / browser back
+window.addEventListener('popstate', e => {
+  const panel = (e.state && e.state.panel) || 'chat';
+  switchPanel(panel, false);
+});
+
+// ── System info card toggle ───────────────────────────────────────────────
+document.getElementById('sysInfoToggle').addEventListener('click', () => {
+  const body = document.getElementById('sysInfoBody');
+  const arrow = document.getElementById('sysInfoArrow');
+  const open = body.style.display === 'block';
+  body.style.display = open ? 'none' : 'block';
+  arrow.style.transform = open ? '' : 'rotate(180deg)';
 });
 
 // ── Chat & Agent Management ─────────────────────────────────────────────────
@@ -2165,9 +2246,13 @@ async function sendMessage(inputEl, historyEl) {
   const apiKey   = sessionStorage.getItem('cfgApiKey');
 
   // Инструкции для текущей панели
-  const instructions = activePanel === 'agent'
+  const userInstr = activePanel === 'agent'
     ? (document.getElementById('cfgAgentInstructions').value.trim())
     : (document.getElementById('cfgChatInstructions').value.trim());
+
+  const sysInfo = `[VELAN EITI v1.6.0 — архитектура приложения]\nFrontend: HTML/CSS/JS, один файл index.html без фреймворков.\nХранилище: IndexedDB (chats, messages, memory, files, config) — всё в браузере.\nAI провайдеры: Ollama (офлайн, localhost:11434), Claude (Anthropic), OpenAI, DeepSeek, Groq, OpenRouter.\nРежимы: Чат, Агент (пошаговые задачи), Память (key-value), История, Файлы, Настройки.\nPWA: Service Worker (sw.js), manifest.json, устанавливается на экран, офлайн через Ollama.\nТемы: 13 тем (data-theme на body).\nФайлы: загрузка PDF/TXT/DOCX/изображений, RAG-контекст через чанки.\nТы видишь эту информацию и можешь советовать улучшения.`;
+
+  const instructions = userInstr ? `${userInstr}\n\n${sysInfo}` : sysInfo;
 
   // Добавляем контекст файлов с использованием чанков
   const filesContext = await getFilesContext(activePanel, text);
@@ -2676,21 +2761,8 @@ openDB().then(() => {
   showToast('⚡ Velan Eiti загружен');
 }).catch(err => console.warn('IndexedDB:', err));
 
-// Tab navigation
-document.querySelectorAll('.mode-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    const panel = tab.dataset.panel;
-    document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById(`panel-${panel}`).classList.add('active');
-    
-    // Load data when switching to specific panels
-    if (panel === 'memory') loadMemory();
-    if (panel === 'history') loadHistory();
-    if (panel === 'files') updateStats();
-  });
-});
+// Set initial history state so back button works from the start
+history.replaceState({ panel: activePanel }, '', '#' + activePanel);
 
 // ── Files: Import / Export ─────────────────────────────────────────────────────
 
