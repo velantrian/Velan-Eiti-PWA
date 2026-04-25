@@ -428,13 +428,19 @@ header {
 
 .mode-tab {
   flex: 1; min-width: 0;
-  padding: 10px 4px;
-  font-family: 'Cinzel', serif; font-size: 0.68rem;
-  letter-spacing: 0.04em; color: var(--text-dim);
+  padding: 6px 2px 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  color: var(--text-dim);
   cursor: pointer; border: none; background: none;
   border-bottom: 2px solid transparent;
   transition: color 0.2s, border-color 0.2s;
-  text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tab-icon { font-size: 1.1rem; line-height: 1; }
+.tab-label {
+  font-family: 'Cinzel', serif; font-size: 0.56rem;
+  letter-spacing: 0.04em; color: inherit;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%; text-align: center;
 }
 .mode-tab.active {
   color: var(--gold-light);
@@ -451,7 +457,7 @@ main {
 
 .panel {
   display: none; flex: 1; flex-direction: column;
-  height: calc(100dvh - 110px);
+  height: calc(100dvh - 122px);
 }
 .panel.active { display: flex; }
 
@@ -1007,7 +1013,10 @@ main {
 @media (min-width: 768px) {
   header { padding: 16px 28px; }
   .mode-bar { padding: 0 28px; }
-  .mode-tab { padding: 10px 18px; font-size: 0.75rem; letter-spacing: 0.1em; flex: none; }
+  .mode-tab { padding: 10px 18px; flex-direction: row; gap: 6px; flex: none; }
+  .tab-icon { font-size: 1rem; }
+  .tab-label { font-size: 0.75rem; letter-spacing: 0.1em; }
+  .panel { height: calc(100dvh - 110px); }
   .chat-history { padding: 24px 28px; }
   .input-bar { padding: 14px 24px; }
   .settings-scroll, .memory-list { padding: 24px 28px; }
@@ -1047,12 +1056,12 @@ main {
   </header>
 
   <nav class="mode-bar">
-    <button class="mode-tab active" data-panel="chat">💬 Чат</button>
-    <button class="mode-tab" data-panel="agent">⚡ Агент</button>
-    <button class="mode-tab" data-panel="memory">🧠 Память</button>
-    <button class="mode-tab" data-panel="history">📜 История</button>
-    <button class="mode-tab" data-panel="files">📁 Файлы</button>
-    <button class="mode-tab" data-panel="settings">⚙ Настройки</button>
+    <button class="mode-tab active" data-panel="chat"><span class="tab-icon">💬</span><span class="tab-label" data-i18n="tab_chat">Чат</span></button>
+    <button class="mode-tab" data-panel="agent"><span class="tab-icon">⚡</span><span class="tab-label" data-i18n="tab_agent">Агент</span></button>
+    <button class="mode-tab" data-panel="memory"><span class="tab-icon">🧠</span><span class="tab-label" data-i18n="tab_memory">Память</span></button>
+    <button class="mode-tab" data-panel="history"><span class="tab-icon">📜</span><span class="tab-label" data-i18n="tab_history">История</span></button>
+    <button class="mode-tab" data-panel="files"><span class="tab-icon">📁</span><span class="tab-label" data-i18n="tab_files">Файлы</span></button>
+    <button class="mode-tab" data-panel="settings"><span class="tab-icon">⚙</span><span class="tab-label" data-i18n="tab_settings">Настройки</span></button>
   </nav>
 
   <main>
@@ -1200,7 +1209,7 @@ main {
           <div class="field">
             <button id="newAgentBtn" class="btn-small" style="width:100%">+ Новый агент</button>
           </div>
-          <button id="clearHistory" class="btn-small btn-danger">🗑 Очистить историю</button>
+          <button id="clearHistory" class="btn-small btn-danger" data-i18n="btn_clear_history">🗑 Очистить историю</button>
         </div>
         <div id="historyItems"></div>
       </div>
@@ -1366,11 +1375,11 @@ main {
         </div>
 
         <div class="card">
-          <div class="card-title">⚙ Параметры</div>
+          <div class="card-title" data-i18n="card_params">⚙ Параметры</div>
           <div class="toggle-row">
             <div>
               <div class="toggle-label">Adaptive Thinking</div>
-              <div class="toggle-sub">Opus 4.7/4.6/Sonnet 4.6 — авто-глубина рассуждений</div>
+              <div class="toggle-sub" data-i18n="tog_thinking_sub">Opus 4.7/4.6/Sonnet 4.6 — авто-глубина рассуждений</div>
             </div>
             <label class="toggle">
               <input type="checkbox" id="cfgThinking">
@@ -1379,8 +1388,8 @@ main {
           </div>
           <div class="toggle-row">
             <div>
-              <div class="toggle-label">Стриминг ответов</div>
-              <div class="toggle-sub">Токены появляются по мере генерации</div>
+              <div class="toggle-label" data-i18n="tog_stream">Стриминг ответов</div>
+              <div class="toggle-sub" data-i18n="tog_stream_sub">Токены появляются по мере генерации</div>
             </div>
             <label class="toggle">
               <input type="checkbox" id="cfgStream" checked>
@@ -1389,8 +1398,8 @@ main {
           </div>
           <div class="toggle-row">
             <div>
-              <div class="toggle-label">Статистика кэша</div>
-              <div class="toggle-sub">KV-Cache hit rate и экономия токенов</div>
+              <div class="toggle-label" data-i18n="tog_stats">Статистика кэша</div>
+              <div class="toggle-sub" data-i18n="tog_stats_sub">KV-Cache hit rate и экономия токенов</div>
             </div>
             <label class="toggle">
               <input type="checkbox" id="cfgStats" checked>
@@ -1399,8 +1408,8 @@ main {
           </div>
           <div class="toggle-row">
             <div>
-              <div class="toggle-label">Авто-подтверждение агента</div>
-              <div class="toggle-sub">Без запроса перед каждым действием</div>
+              <div class="toggle-label" data-i18n="tog_autoconfirm">Авто-подтверждение агента</div>
+              <div class="toggle-sub" data-i18n="tog_autoconfirm_sub">Без запроса перед каждым действием</div>
             </div>
             <label class="toggle">
               <input type="checkbox" id="cfgAutoConfirm">
@@ -1410,9 +1419,9 @@ main {
         </div>
 
         <div class="card">
-          <div class="card-title">🎨 Тема</div>
+          <div class="card-title" data-i18n="card_theme">🎨 Тема</div>
           <div class="field">
-            <label>Тема интерфейса</label>
+            <label data-i18n="lbl_theme">Тема интерфейса</label>
             <select id="cfgTheme">
               <option value="midnight">🌙 Midnight (по умолчанию)</option>
               <option value="plasma">⚡ Plasma</option>
@@ -1431,17 +1440,28 @@ main {
         </div>
 
         <div class="card">
+          <div class="card-title" data-i18n="card_lang">🌐 Язык</div>
+          <div class="field">
+            <label data-i18n="lbl_lang">Язык интерфейса</label>
+            <select id="cfgLang">
+              <option value="ru">🇷🇺 Русский</option>
+              <option value="en">🇬🇧 English</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-title">📱 PWA</div>
           <div class="toggle-row">
             <div>
-              <div class="toggle-label">Статус установки</div>
-              <div class="toggle-sub" id="pwaStatus">Проверяется...</div>
+              <div class="toggle-label" data-i18n="lbl_pwa_status">Статус установки</div>
+              <div class="toggle-sub" id="pwaStatus" data-i18n="status_checking">Проверяется...</div>
             </div>
             <div id="pwaDot" class="status-dot"></div>
           </div>
           <div class="toggle-row">
             <div>
-              <div class="toggle-label">Ollama офлайн</div>
+              <div class="toggle-label" data-i18n="lbl_ollama">Ollama офлайн</div>
               <div class="toggle-sub" id="ollamaStatus">localhost:11434</div>
             </div>
             <div id="ollamaDot" class="status-dot"></div>
@@ -1836,29 +1856,7 @@ document.getElementById('clearAgentBtn').addEventListener('click', async () => {
   }
 });
 
-// ── Fullscreen on double tap ───────────────────────────────────────────────
-let lastTap = 0;
-
-function handleDoubleTap(element) {
-  element.addEventListener('touchend', (e) => {
-    const currentTime = new Date().getTime();
-    const tapLength = currentTime - lastTap;
-    if (tapLength < 300 && tapLength > 0) {
-      // Double tap detected
-      if (!document.fullscreenElement) {
-        element.requestFullscreen().catch(err => console.log('Fullscreen error:', err));
-      } else {
-        document.exitFullscreen().catch(err => console.log('Exit fullscreen error:', err));
-      }
-      e.preventDefault();
-    }
-    lastTap = currentTime;
-  });
-}
-
-// Enable double tap fullscreen for chat and agent history
-handleDoubleTap(document.getElementById('chatHistory'));
-handleDoubleTap(document.getElementById('agentHistory'));
+// Fullscreen double-tap removed — caused unwanted browser popups on Android
 
 // ── Chunking System ───────────────────────────────────────────────────────
 const CHUNK_SIZE = 2000; // символов на чанк
@@ -2555,6 +2553,7 @@ async function loadConfig() {
   if (cfg.thinking !== undefined) document.getElementById('cfgThinking').checked = cfg.thinking;
   if (cfg.chatInstructions) document.getElementById('cfgChatInstructions').value = cfg.chatInstructions;
   if (cfg.agentInstructions) document.getElementById('cfgAgentInstructions').value = cfg.agentInstructions;
+  if (cfg.lang) { document.getElementById('cfgLang').value = cfg.lang; applyLang(cfg.lang); }
 
   // Применяем тему
   applyTheme(cfg.theme || 'midnight');
@@ -2924,6 +2923,50 @@ async function updateStats() {
 document.getElementById('refreshStats').addEventListener('click', updateStats);
 
 // Вспомогательная функция для скачивания файла
+// ── i18n ─────────────────────────────────────────────────────────────────
+const LANGS = {
+  ru: {
+    tab_chat:'Чат', tab_agent:'Агент', tab_memory:'Память',
+    tab_history:'История', tab_files:'Файлы', tab_settings:'Настройки',
+    card_params:'⚙ Параметры', card_theme:'🎨 Тема', card_lang:'🌐 Язык',
+    lbl_theme:'Тема интерфейса', lbl_lang:'Язык интерфейса',
+    lbl_pwa_status:'Статус установки', lbl_ollama:'Ollama офлайн',
+    tog_stream:'Стриминг ответов', tog_stream_sub:'Токены появляются по мере генерации',
+    tog_stats:'Статистика кэша', tog_stats_sub:'KV-Cache hit rate и экономия токенов',
+    tog_thinking_sub:'Opus 4.7/4.6/Sonnet 4.6 — авто-глубина рассуждений',
+    tog_autoconfirm:'Авто-подтверждение агента', tog_autoconfirm_sub:'Без запроса перед каждым действием',
+    btn_clear_history:'🗑 Очистить историю',
+    status_checking:'Проверяется...',
+  },
+  en: {
+    tab_chat:'Chat', tab_agent:'Agent', tab_memory:'Memory',
+    tab_history:'History', tab_files:'Files', tab_settings:'Settings',
+    card_params:'⚙ Parameters', card_theme:'🎨 Theme', card_lang:'🌐 Language',
+    lbl_theme:'Interface theme', lbl_lang:'Interface language',
+    lbl_pwa_status:'Install status', lbl_ollama:'Ollama offline',
+    tog_stream:'Response streaming', tog_stream_sub:'Tokens appear as generated',
+    tog_stats:'Cache statistics', tog_stats_sub:'KV-Cache hit rate and token savings',
+    tog_thinking_sub:'Opus 4.7/4.6/Sonnet 4.6 — auto reasoning depth',
+    tog_autoconfirm:'Auto-confirm agent', tog_autoconfirm_sub:'No prompt before each action',
+    btn_clear_history:'🗑 Clear history',
+    status_checking:'Checking...',
+  }
+};
+
+let currentLang = 'ru';
+
+function applyLang(lang) {
+  currentLang = lang;
+  const t = LANGS[lang] || LANGS.ru;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const v = t[el.dataset.i18n];
+    if (v !== undefined) el.textContent = v;
+  });
+  if (db) dbPut('config', { id: 'lang', key: 'lang', value: lang });
+}
+
+document.getElementById('cfgLang').addEventListener('change', e => applyLang(e.target.value));
+
 function downloadFile(content, filename, mimeType) {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
