@@ -1682,13 +1682,8 @@ async function loadChatSelector() {
   const chats = await dbGetAll('chats');
   const selector = document.getElementById('chatSelector');
   selector.innerHTML = '';
-  
+
   if (!chats.length) {
-    // Не создаем чат здесь, просто показываем пустой селектор
-    const option = document.createElement('option');
-    option.value = '';
-    option.textContent = 'Нет чатов';
-    selector.appendChild(option);
     return;
   }
   
@@ -1785,13 +1780,8 @@ async function loadAgentSelector() {
   const agents = await dbGetAll('agents');
   const selector = document.getElementById('agentSelector');
   selector.innerHTML = '';
-  
+
   if (!agents.length) {
-    // Не создаем агент здесь, просто показываем пустой селектор
-    const option = document.createElement('option');
-    option.value = '';
-    option.textContent = 'Нет агентов';
-    selector.appendChild(option);
     return;
   }
   
@@ -1996,12 +1986,15 @@ function appendMsg(text, role, container) {
   div.className = 'msg ' + role;
   const now = new Date().toLocaleTimeString('ru', { hour:'2-digit', minute:'2-digit' });
   const msgId = 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-  
+
   // Check for file creation syntax: ```file:filename.ext```
   const fileMatch = text.match(/```file:([^\n]+)\n([\s\S]*?)```/);
   let processedText = text;
   let fileBtn = '';
-  
+
+  // Remove markdown asterisks for clean display
+  processedText = processedText.replace(/\*\*([^*]+)\*\*/g, '$1');
+
   if (fileMatch && role === 'ai') {
     const filename = fileMatch[1];
     const fileContent = fileMatch[2];
