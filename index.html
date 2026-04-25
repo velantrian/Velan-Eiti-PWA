@@ -2042,10 +2042,8 @@ function appendMsg(text, role, container) {
       <div class="msg-actions">
         ${role === 'user'
           ? `<button class="msg-action-btn" onclick="toggleEditMode('${msgId}')" title="Редактировать">✏️</button>`
-          : ``
+          : `<button class="msg-action-btn" onclick="copyMessage('${msgId}')" title="Копировать">📋</button><button class="msg-action-btn" onclick="speakMessage('${msgId}')" title="Озвучить">🔊</button>`
         }
-        <button class="msg-action-btn" onclick="copyMessage('${msgId}')" title="Копировать">📋</button>
-        <button class="msg-action-btn" onclick="speakMessage('${msgId}')" title="Озвучить">🔊</button>
       </div>
     </div>
     <div id="${msgId}" class="msg-content">${processedText}</div>
@@ -2099,6 +2097,14 @@ function toggleEditMode(msgId) {
   msgEl.style.border = '1px solid rgba(201,149,42,0.3)';
   msgEl.focus();
   msgEl.dataset.originalText = originalText;
+
+  // Переместить курсор в конец текста
+  const range = document.createRange();
+  const sel = window.getSelection();
+  range.selectNodeContents(msgEl);
+  range.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(range);
 
   editActionsEl.style.display = 'flex';
 }
