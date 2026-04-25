@@ -428,17 +428,17 @@ header {
 
 .mode-tab {
   flex: 1; min-width: 0;
-  padding: 6px 2px 8px;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 5px 1px 7px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
   color: var(--text-dim);
   cursor: pointer; border: none; background: none;
   border-bottom: 2px solid transparent;
   transition: color 0.2s, border-color 0.2s;
 }
-.tab-icon { font-size: 1.1rem; line-height: 1; }
+.tab-icon { font-size: 1.05rem; line-height: 1; }
 .tab-label {
-  font-family: 'Cinzel', serif; font-size: 0.56rem;
-  letter-spacing: 0.04em; color: inherit;
+  font-family: 'Cinzel', serif; font-size: 0.54rem;
+  letter-spacing: 0.02em; color: inherit;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 100%; text-align: center;
 }
@@ -1151,32 +1151,32 @@ main {
       <div class="memory-list" id="memoryList">
         <div class="card">
           <div class="card-title">🧠 ExoCortex L0+L1</div>
-          <p style="font-size:0.88rem; color: var(--text-dim); line-height:1.6">
+          <p id="memInfoText" style="font-size:0.88rem; color: var(--text-dim); line-height:1.6">
             Память о проектах хранится в IndexedDB локально в браузере.<br>
             Факты проходят через ESM: <strong style="color:var(--gold-dim)">Observed → Validated → Collapsed</strong>.
           </p>
         </div>
-        
+
         <!-- Add/Edit Memory Form -->
         <div class="card">
-          <div class="card-title">📝 Новая запись</div>
+          <div class="card-title" data-i18n="card_new_memory">📝 Новая запись</div>
           <div class="field">
-            <label>Workspace / Проект</label>
-            <input type="text" id="memWorkspace" placeholder="например: my-project">
+            <label data-i18n="lbl_workspace">Workspace / Проект</label>
+            <input type="text" id="memWorkspace" placeholder="например: my-project" data-i18n-ph="ph_workspace">
           </div>
           <div class="field">
-            <label>Описание</label>
-            <textarea id="memSummary" rows="3" placeholder="Краткое описание..."></textarea>
+            <label data-i18n="lbl_description">Описание</label>
+            <textarea id="memSummary" rows="3" placeholder="Краткое описание..." data-i18n-ph="ph_description"></textarea>
           </div>
           <div class="field">
-            <label>ESM статус</label>
+            <label data-i18n="lbl_esm">ESM статус</label>
             <select id="memEsm">
               <option value="Observed">Observed</option>
               <option value="Validated">Validated</option>
               <option value="Collapsed">Collapsed</option>
             </select>
           </div>
-          <button id="saveMemory" class="btn-small" style="width:100%">💾 Сохранить</button>
+          <button id="saveMemory" class="btn-small" style="width:100%" data-i18n="btn_save">💾 Сохранить</button>
         </div>
         
         <div id="memoryItems"></div>
@@ -1187,27 +1187,27 @@ main {
     <section class="panel" id="panel-history">
       <div class="history-list" id="historyList">
         <div class="card">
-          <div class="card-title">📜 История чата</div>
+          <div class="card-title" data-i18n="card_history">📜 История чата</div>
           <div class="field">
-            <label>Поиск</label>
+            <label data-i18n="lbl_search">Поиск</label>
             <div class="input-with-btn">
-              <input type="text" id="historySearch" placeholder="Поиск по сообщениям...">
+              <input type="text" id="historySearch" placeholder="Поиск по сообщениям..." data-i18n-ph="ph_search">
               <button id="historySearchBtn" class="btn-small">🔍</button>
             </div>
           </div>
           <div class="field">
-            <label>Фильтр по панели</label>
+            <label data-i18n="lbl_filter">Фильтр по панели</label>
             <select id="historyFilter">
-              <option value="all">Все</option>
-              <option value="chat">Чат</option>
-              <option value="agent">Агент</option>
+              <option value="all" data-i18n="opt_all">Все</option>
+              <option value="chat" data-i18n="tab_chat">Чат</option>
+              <option value="agent" data-i18n="tab_agent">Агент</option>
             </select>
           </div>
           <div class="field">
-            <button id="newChatBtn" class="btn-small" style="width:100%">+ Новый чат</button>
+            <button id="newChatBtn" class="btn-small" style="width:100%" data-i18n="btn_new_chat">+ Новый чат</button>
           </div>
           <div class="field">
-            <button id="newAgentBtn" class="btn-small" style="width:100%">+ Новый агент</button>
+            <button id="newAgentBtn" class="btn-small" style="width:100%" data-i18n="btn_new_agent">+ Новый агент</button>
           </div>
           <button id="clearHistory" class="btn-small btn-danger" data-i18n="btn_clear_history">🗑 Очистить историю</button>
         </div>
@@ -1219,68 +1219,59 @@ main {
     <section class="panel" id="panel-files">
       <div class="settings-scroll">
         <div class="card">
-          <div class="card-title">📁 Импорт / Экспорт</div>
-          <p style="font-size:0.85rem;color:var(--text-dim);margin-bottom:15px;line-height:1.5">
+          <div class="card-title" data-i18n="card_files">📁 Импорт / Экспорт</div>
+          <p data-i18n="files_desc" style="font-size:0.85rem;color:var(--text-dim);margin-bottom:15px;line-height:1.5">
             Экспортируйте и импортируйте данные приложения в различных форматах.
           </p>
-          
           <div class="field">
-            <label>Экспорт чата (JSON)</label>
-            <button id="exportChatJson" class="btn-small" style="width:100%">📥 Экспортировать чат</button>
+            <label data-i18n="lbl_exp_chat_json">Экспорт чата (JSON)</label>
+            <button id="exportChatJson" class="btn-small" style="width:100%" data-i18n="btn_exp_chat">📥 Экспортировать чат</button>
           </div>
-          
           <div class="field">
-            <label>Экспорт чата (TXT)</label>
-            <button id="exportChatTxt" class="btn-small" style="width:100%">📥 Экспортировать чат</button>
+            <label data-i18n="lbl_exp_chat_txt">Экспорт чата (TXT)</label>
+            <button id="exportChatTxt" class="btn-small" style="width:100%" data-i18n="btn_exp_chat">📥 Экспортировать чат</button>
           </div>
-          
           <div class="field">
-            <label>Экспорт чата (Markdown)</label>
-            <button id="exportChatMd" class="btn-small" style="width:100%">📥 Экспортировать чат</button>
+            <label data-i18n="lbl_exp_chat_md">Экспорт чата (Markdown)</label>
+            <button id="exportChatMd" class="btn-small" style="width:100%" data-i18n="btn_exp_chat">📥 Экспортировать чат</button>
           </div>
-          
           <div class="field">
-            <label>Экспорт памяти (JSON)</label>
-            <button id="exportMemoryJson" class="btn-small" style="width:100%">📥 Экспортировать память</button>
+            <label data-i18n="lbl_exp_memory">Экспорт памяти (JSON)</label>
+            <button id="exportMemoryJson" class="btn-small" style="width:100%" data-i18n="btn_exp_memory">📥 Экспортировать память</button>
           </div>
-          
           <div class="field">
-            <label>Экспорт конфигурации (JSON)</label>
-            <button id="exportConfigJson" class="btn-small" style="width:100%">📥 Экспортировать конфигурацию</button>
+            <label data-i18n="lbl_exp_config">Экспорт конфигурации (JSON)</label>
+            <button id="exportConfigJson" class="btn-small" style="width:100%" data-i18n="btn_exp_config">📥 Экспортировать конфигурацию</button>
           </div>
-          
           <hr style="border:none;border-top:1px solid rgba(201,149,42,0.15);margin:20px 0">
-          
           <div class="field">
-            <label>Импорт чата (JSON)</label>
+            <label data-i18n="lbl_imp_chat">Импорт чата (JSON)</label>
             <input type="file" id="importChatJson" accept=".json" style="display:none">
-            <button id="importChatBtn" class="btn-small" style="width:100%">📤 Импортировать чат</button>
+            <button id="importChatBtn" class="btn-small" style="width:100%" data-i18n="btn_imp_chat">📤 Импортировать чат</button>
           </div>
-          
           <div class="field">
-            <label>Импорт памяти (JSON)</label>
+            <label data-i18n="lbl_imp_memory">Импорт памяти (JSON)</label>
             <input type="file" id="importMemoryJson" accept=".json" style="display:none">
-            <button id="importMemoryBtn" class="btn-small" style="width:100%">📤 Импортировать память</button>
+            <button id="importMemoryBtn" class="btn-small" style="width:100%" data-i18n="btn_imp_memory">📤 Импортировать память</button>
           </div>
-          
           <div class="field">
-            <label>Импорт конфигурации (JSON)</label>
+            <label data-i18n="lbl_imp_config">Импорт конфигурации (JSON)</label>
             <input type="file" id="importConfigJson" accept=".json" style="display:none">
-            <button id="importConfigBtn" class="btn-small" style="width:100%">📤 Импортировать конфигурацию</button>
+            <button id="importConfigBtn" class="btn-small" style="width:100%" data-i18n="btn_imp_config">📤 Импортировать конфигурацию</button>
           </div>
         </div>
-        
+
         <div class="card">
-          <div class="card-title">📊 Статистика</div>
+          <div class="card-title" data-i18n="card_stats">📊 Статистика</div>
           <div class="field">
-            <label>Всего сообщений</label>
+            <label data-i18n="lbl_total_msgs">Всего сообщений</label>
             <div id="statsMessages" style="font-size:0.9rem;color:var(--text)">0</div>
           </div>
           <div class="field">
-            <label>Записей памяти</label>
+            <label data-i18n="lbl_memory_count">Записей памяти</label>
             <div id="statsMemory" style="font-size:0.9rem;color:var(--text)">0</div>
           </div>
-          <button id="refreshStats" class="btn-small" style="width:100%">🔄 Обновить статистику</button>
+          <button id="refreshStats" class="btn-small" style="width:100%" data-i18n="btn_refresh_stats">🔄 Обновить статистику</button>
         </div>
       </div>
     </section>
@@ -1290,11 +1281,11 @@ main {
       <div class="settings-scroll">
 
         <div class="card">
-          <div class="card-title">🔌 Провайдер</div>
+          <div class="card-title" data-i18n="card_provider">🔌 Провайдер</div>
           <div class="field">
             <label>API Provider</label>
             <select id="cfgProvider">
-              <option value="ollama">🖥 Ollama (офлайн)</option>
+              <option value="ollama" data-i18n="opt_ollama">🖥 Ollama (офлайн)</option>
               <option value="deepseek">🔵 DeepSeek V4</option>
               <option value="claude">🟣 Claude</option>
               <option value="openai">⚪ OpenAI GPT-5.5</option>
@@ -1303,7 +1294,7 @@ main {
             </select>
           </div>
           <div class="field">
-            <label>Модель</label>
+            <label data-i18n="lbl_model">Модель</label>
             <select id="cfgModel">
               <option value="deepseek-v4-flash">DeepSeek V4 Flash ⭐</option>
               <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
@@ -1320,45 +1311,45 @@ main {
             <label>API Key</label>
             <div class="input-with-btn">
               <input type="password" id="cfgApiKey" placeholder="sk-...">
-              <button id="activateApiKey" class="btn-small">✓ Активировать</button>
+              <button id="activateApiKey" class="btn-small" data-i18n="btn_activate">✓ Активировать</button>
             </div>
           </div>
           <div class="field">
-            <label>Статус API</label>
+            <label data-i18n="lbl_apistatus">Статус API</label>
             <div style="display:flex;align-items:center;gap:8px">
               <div id="apiStatusDot" class="status-dot"></div>
-              <span id="apiStatusText" style="font-size:0.85rem;color:var(--text-dim)">Не проверено</span>
-              <button id="testApi" class="btn-small" style="margin-left:auto">🔄 Проверить</button>
+              <span id="apiStatusText" data-i18n="status_not_checked" style="font-size:0.85rem;color:var(--text-dim)">Не проверено</span>
+              <button id="testApi" class="btn-small" style="margin-left:auto" data-i18n="btn_test_api">🔄 Проверить</button>
             </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-title">📋 Инструкции</div>
-          <p style="font-size:0.85rem;color:var(--text-dim);margin-bottom:15px;line-height:1.5">
+          <div class="card-title" data-i18n="card_instructions">📋 Инструкции</div>
+          <p data-i18n="instr_desc" style="font-size:0.85rem;color:var(--text-dim);margin-bottom:15px;line-height:1.5">
             Задайте как ИИ должен отвечать. Пример: «Отвечай кратко, используй emoji, говори на русском».
           </p>
           <div class="field">
-            <label>Инструкции для Чата 💬</label>
-            <textarea id="cfgChatInstructions" rows="4" placeholder="Например: Всегда отвечай кратко и по сути. Вставляй emoji в ответ. Говори только на русском."></textarea>
+            <label data-i18n="lbl_chat_instr">Инструкции для Чата 💬</label>
+            <textarea id="cfgChatInstructions" rows="4" placeholder="Например: Всегда отвечай кратко и по сути. Вставляй emoji в ответ. Говори только на русском." data-i18n-ph="ph_chat_instr"></textarea>
           </div>
           <div class="field">
-            <label>Инструкции для Агента ⚡</label>
-            <textarea id="cfgAgentInstructions" rows="4" placeholder="Например: Ты опытный разработчик. Всегда объясняй свой код. Предлагай оптимизации."></textarea>
+            <label data-i18n="lbl_agent_instr">Инструкции для Агента ⚡</label>
+            <textarea id="cfgAgentInstructions" rows="4" placeholder="Например: Ты опытный разработчик. Всегда объясняй свой код. Предлагай оптимизации." data-i18n-ph="ph_agent_instr"></textarea>
           </div>
-          <button id="saveInstructions" class="btn-small" style="width:100%">💾 Сохранить инструкции</button>
+          <button id="saveInstructions" class="btn-small" style="width:100%" data-i18n="btn_save_instr">💾 Сохранить инструкции</button>
         </div>
 
         <div class="card">
           <div class="card-title" id="sysInfoToggle" style="cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between">
-            <span>🔍 О системе</span>
+            <span data-i18n="card_about">🔍 О системе</span>
             <span id="sysInfoArrow" style="font-size:0.75rem;transition:transform 0.25s">▼</span>
           </div>
-          <p style="font-size:0.82rem;color:var(--text-dim);margin-bottom:10px;line-height:1.5">
+          <p id="sysInfoDesc" data-i18n="about_desc" style="font-size:0.82rem;color:var(--text-dim);margin-bottom:10px;line-height:1.5">
             Нажмите, чтобы увидеть архитектуру приложения. ИИ также получает эту информацию в системном контексте.
           </p>
           <div id="sysInfoBody" style="display:none">
-            <div style="font-size:0.82rem;line-height:1.7;color:var(--text)">
+            <div id="sysInfoContent" style="font-size:0.82rem;line-height:1.7;color:var(--text)">
               <p style="color:var(--gold);font-weight:600;margin-bottom:8px">VELAN EITI v1.6.0 — PWA-приложение для работы с AI</p>
               <p style="margin-bottom:6px"><strong>Frontend:</strong> Чистый HTML/CSS/JS без фреймворков. Один файл <code>index.html</code>, встроенный CSS и JS.</p>
               <p style="margin-bottom:6px"><strong>Хранилище:</strong> IndexedDB — базы: <code>chats</code>, <code>messages</code>, <code>memory</code>, <code>files</code>, <code>config</code>. Данные живут в браузере.</p>
@@ -1451,7 +1442,7 @@ main {
         </div>
 
         <div class="card">
-          <div class="card-title">📱 PWA</div>
+          <div class="card-title" data-i18n="card_pwa">📱 PWA</div>
           <div class="toggle-row">
             <div>
               <div class="toggle-label" data-i18n="lbl_pwa_status">Статус установки</div>
@@ -1856,7 +1847,24 @@ document.getElementById('clearAgentBtn').addEventListener('click', async () => {
   }
 });
 
-// Fullscreen double-tap removed — caused unwanted browser popups on Android
+// ── Fullscreen on double tap ───────────────────────────────────────────────
+let lastTap = 0;
+function handleDoubleTap(element) {
+  element.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTap < 300 && now - lastTap > 0) {
+      if (!document.fullscreenElement) {
+        element.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+      e.preventDefault();
+    }
+    lastTap = now;
+  });
+}
+handleDoubleTap(document.getElementById('chatHistory'));
+handleDoubleTap(document.getElementById('agentHistory'));
 
 // ── Chunking System ───────────────────────────────────────────────────────
 const CHUNK_SIZE = 2000; // символов на чанк
@@ -2926,30 +2934,120 @@ document.getElementById('refreshStats').addEventListener('click', updateStats);
 // ── i18n ─────────────────────────────────────────────────────────────────
 const LANGS = {
   ru: {
+    // tabs
     tab_chat:'Чат', tab_agent:'Агент', tab_memory:'Память',
     tab_history:'История', tab_files:'Файлы', tab_settings:'Настройки',
-    card_params:'⚙ Параметры', card_theme:'🎨 Тема', card_lang:'🌐 Язык',
+    // card titles
+    card_provider:'🔌 Провайдер', card_instructions:'📋 Инструкции',
+    card_about:'🔍 О системе', card_params:'⚙ Параметры',
+    card_theme:'🎨 Тема', card_lang:'🌐 Язык', card_pwa:'📱 PWA',
+    card_history:'📜 История чата', card_files:'📁 Импорт / Экспорт',
+    card_stats:'📊 Статистика', card_new_memory:'📝 Новая запись',
+    // labels
+    lbl_model:'Модель', lbl_apistatus:'Статус API',
     lbl_theme:'Тема интерфейса', lbl_lang:'Язык интерфейса',
     lbl_pwa_status:'Статус установки', lbl_ollama:'Ollama офлайн',
+    lbl_chat_instr:'Инструкции для Чата 💬',
+    lbl_agent_instr:'Инструкции для Агента ⚡',
+    lbl_search:'Поиск', lbl_filter:'Фильтр по панели',
+    lbl_workspace:'Workspace / Проект', lbl_description:'Описание', lbl_esm:'ESM статус',
+    lbl_exp_chat_json:'Экспорт чата (JSON)', lbl_exp_chat_txt:'Экспорт чата (TXT)',
+    lbl_exp_chat_md:'Экспорт чата (Markdown)', lbl_exp_memory:'Экспорт памяти (JSON)',
+    lbl_exp_config:'Экспорт конфигурации (JSON)',
+    lbl_imp_chat:'Импорт чата (JSON)', lbl_imp_memory:'Импорт памяти (JSON)',
+    lbl_imp_config:'Импорт конфигурации (JSON)',
+    lbl_total_msgs:'Всего сообщений', lbl_memory_count:'Записей памяти',
+    // buttons
+    btn_activate:'✓ Активировать', btn_test_api:'🔄 Проверить',
+    btn_save_instr:'💾 Сохранить инструкции',
+    btn_new_chat:'+ Новый чат', btn_new_agent:'+ Новый агент',
+    btn_clear_history:'🗑 Очистить историю',
+    btn_exp_chat:'📥 Экспортировать чат', btn_exp_memory:'📥 Экспортировать память',
+    btn_exp_config:'📥 Экспортировать конфигурацию',
+    btn_imp_chat:'📤 Импортировать чат', btn_imp_memory:'📤 Импортировать память',
+    btn_imp_config:'📤 Импортировать конфигурацию',
+    btn_refresh_stats:'🔄 Обновить статистику', btn_save:'💾 Сохранить',
+    // toggles
     tog_stream:'Стриминг ответов', tog_stream_sub:'Токены появляются по мере генерации',
     tog_stats:'Статистика кэша', tog_stats_sub:'KV-Cache hit rate и экономия токенов',
     tog_thinking_sub:'Opus 4.7/4.6/Sonnet 4.6 — авто-глубина рассуждений',
     tog_autoconfirm:'Авто-подтверждение агента', tog_autoconfirm_sub:'Без запроса перед каждым действием',
-    btn_clear_history:'🗑 Очистить историю',
-    status_checking:'Проверяется...',
+    // status / options
+    status_not_checked:'Не проверено', status_checking:'Проверяется...',
+    opt_all:'Все', opt_ollama:'🖥 Ollama (офлайн)',
+    // descriptions
+    instr_desc:'Задайте как ИИ должен отвечать. Пример: «Отвечай кратко, используй emoji, говори на русском».',
+    about_desc:'Нажмите, чтобы увидеть архитектуру приложения. ИИ также получает эту информацию в системном контексте.',
+    files_desc:'Экспортируйте и импортируйте данные приложения в различных форматах.',
+    // placeholders
+    ph_search:'Поиск по сообщениям...',
+    ph_chat_instr:'Например: Всегда отвечай кратко и по сути. Вставляй emoji в ответ. Говори только на русском.',
+    ph_agent_instr:'Например: Ты опытный разработчик. Всегда объясняй свой код. Предлагай оптимизации.',
+    ph_workspace:'например: my-project', ph_description:'Краткое описание...',
+    // sysInfoContent (innerHTML)
+    sysInfoContent:`<p style="color:var(--gold);font-weight:600;margin-bottom:8px">VELAN EITI v1.6.0 — PWA-приложение для работы с AI</p>
+<p style="margin-bottom:6px"><strong>Frontend:</strong> Чистый HTML/CSS/JS без фреймворков. Один файл <code>index.html</code>.</p>
+<p style="margin-bottom:6px"><strong>Хранилище:</strong> IndexedDB — chats, messages, memory, files, config. Данные в браузере.</p>
+<p style="margin-bottom:6px"><strong>AI провайдеры:</strong> Ollama (офлайн), Claude, OpenAI, DeepSeek, Groq, OpenRouter.</p>
+<p style="margin-bottom:6px"><strong>Режимы:</strong> Чат, Агент, Память (key-value), История, Файлы, Настройки.</p>
+<p style="margin-bottom:6px"><strong>PWA:</strong> Service Worker, manifest.json, устанавливается на экран. Офлайн через Ollama.</p>
+<p style="margin-bottom:6px"><strong>Темы:</strong> 13 цветовых тем, переключаются через data-theme на body.</p>
+<p style="margin-bottom:6px"><strong>Файлы:</strong> PDF, TXT, DOCX, изображения — RAG-контекст через чанки.</p>
+<p style="color:var(--text-dim);font-size:0.78rem;margin-top:10px;padding-top:10px;border-top:1px solid var(--toggle-border)">💡 ИИ видит эту информацию и может давать советы по улучшению.</p>`,
+    memInfoText:`Память о проектах хранится в IndexedDB локально в браузере.<br>Факты проходят через ESM: <strong style="color:var(--gold-dim)">Observed → Validated → Collapsed</strong>.`,
   },
   en: {
     tab_chat:'Chat', tab_agent:'Agent', tab_memory:'Memory',
     tab_history:'History', tab_files:'Files', tab_settings:'Settings',
-    card_params:'⚙ Parameters', card_theme:'🎨 Theme', card_lang:'🌐 Language',
+    card_provider:'🔌 Provider', card_instructions:'📋 Instructions',
+    card_about:'🔍 About System', card_params:'⚙ Parameters',
+    card_theme:'🎨 Theme', card_lang:'🌐 Language', card_pwa:'📱 PWA',
+    card_history:'📜 Chat History', card_files:'📁 Import / Export',
+    card_stats:'📊 Statistics', card_new_memory:'📝 New Record',
+    lbl_model:'Model', lbl_apistatus:'API Status',
     lbl_theme:'Interface theme', lbl_lang:'Interface language',
     lbl_pwa_status:'Install status', lbl_ollama:'Ollama offline',
+    lbl_chat_instr:'Chat Instructions 💬', lbl_agent_instr:'Agent Instructions ⚡',
+    lbl_search:'Search', lbl_filter:'Filter by panel',
+    lbl_workspace:'Workspace / Project', lbl_description:'Description', lbl_esm:'ESM status',
+    lbl_exp_chat_json:'Export chat (JSON)', lbl_exp_chat_txt:'Export chat (TXT)',
+    lbl_exp_chat_md:'Export chat (Markdown)', lbl_exp_memory:'Export memory (JSON)',
+    lbl_exp_config:'Export config (JSON)',
+    lbl_imp_chat:'Import chat (JSON)', lbl_imp_memory:'Import memory (JSON)',
+    lbl_imp_config:'Import config (JSON)',
+    lbl_total_msgs:'Total messages', lbl_memory_count:'Memory records',
+    btn_activate:'✓ Activate', btn_test_api:'🔄 Test',
+    btn_save_instr:'💾 Save instructions',
+    btn_new_chat:'+ New chat', btn_new_agent:'+ New agent',
+    btn_clear_history:'🗑 Clear history',
+    btn_exp_chat:'📥 Export chat', btn_exp_memory:'📥 Export memory',
+    btn_exp_config:'📥 Export config',
+    btn_imp_chat:'📤 Import chat', btn_imp_memory:'📤 Import memory',
+    btn_imp_config:'📤 Import config',
+    btn_refresh_stats:'🔄 Refresh stats', btn_save:'💾 Save',
     tog_stream:'Response streaming', tog_stream_sub:'Tokens appear as generated',
     tog_stats:'Cache statistics', tog_stats_sub:'KV-Cache hit rate and token savings',
     tog_thinking_sub:'Opus 4.7/4.6/Sonnet 4.6 — auto reasoning depth',
     tog_autoconfirm:'Auto-confirm agent', tog_autoconfirm_sub:'No prompt before each action',
-    btn_clear_history:'🗑 Clear history',
-    status_checking:'Checking...',
+    status_not_checked:'Not checked', status_checking:'Checking...',
+    opt_all:'All', opt_ollama:'🖥 Ollama (offline)',
+    instr_desc:'Set how the AI should respond. Example: "Be concise, use emoji, reply in English".',
+    about_desc:'Tap to see app architecture. AI also receives this info in the system context.',
+    files_desc:'Export and import app data in various formats.',
+    ph_search:'Search messages...',
+    ph_chat_instr:'Example: Always be brief and to the point. Insert emoji. Reply only in English.',
+    ph_agent_instr:'Example: You are an experienced developer. Always explain your code. Suggest optimizations.',
+    ph_workspace:'e.g.: my-project', ph_description:'Brief description...',
+    sysInfoContent:`<p style="color:var(--gold);font-weight:600;margin-bottom:8px">VELAN EITI v1.6.0 — PWA app for working with AI</p>
+<p style="margin-bottom:6px"><strong>Frontend:</strong> Pure HTML/CSS/JS, no frameworks. Single file <code>index.html</code>.</p>
+<p style="margin-bottom:6px"><strong>Storage:</strong> IndexedDB — chats, messages, memory, files, config. All data in the browser.</p>
+<p style="margin-bottom:6px"><strong>AI providers:</strong> Ollama (offline), Claude, OpenAI, DeepSeek, Groq, OpenRouter.</p>
+<p style="margin-bottom:6px"><strong>Modes:</strong> Chat, Agent, Memory (key-value), History, Files, Settings.</p>
+<p style="margin-bottom:6px"><strong>PWA:</strong> Service Worker, manifest.json, installable. Offline via Ollama.</p>
+<p style="margin-bottom:6px"><strong>Themes:</strong> 13 color themes switched via data-theme on body.</p>
+<p style="margin-bottom:6px"><strong>Files:</strong> PDF, TXT, DOCX, images — RAG context via chunking.</p>
+<p style="color:var(--text-dim);font-size:0.78rem;margin-top:10px;padding-top:10px;border-top:1px solid var(--toggle-border)">💡 AI sees this info and can suggest improvements.</p>`,
+    memInfoText:`Project memory is stored in IndexedDB locally in the browser.<br>Facts go through ESM: <strong style="color:var(--gold-dim)">Observed → Validated → Collapsed</strong>.`,
   }
 };
 
@@ -2958,10 +3056,21 @@ let currentLang = 'ru';
 function applyLang(lang) {
   currentLang = lang;
   const t = LANGS[lang] || LANGS.ru;
+  // Simple text elements
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const v = t[el.dataset.i18n];
     if (v !== undefined) el.textContent = v;
   });
+  // Placeholder text
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    const v = t[el.dataset.i18nPh];
+    if (v !== undefined) el.placeholder = v;
+  });
+  // Rich HTML sections
+  const sysEl = document.getElementById('sysInfoContent');
+  if (sysEl && t.sysInfoContent) sysEl.innerHTML = t.sysInfoContent;
+  const memEl = document.getElementById('memInfoText');
+  if (memEl && t.memInfoText) memEl.innerHTML = t.memInfoText;
   if (db) dbPut('config', { id: 'lang', key: 'lang', value: lang });
 }
 
