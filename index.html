@@ -1905,25 +1905,42 @@ document.getElementById('clearAgentBtn').addEventListener('click', async () => {
   }
 });
 
-// ── Fullscreen on double tap ───────────────────────────────────────────────
-// Отключено - слишком часто срабатывало при случайном двойном касании
-// let lastTap = 0;
-// function handleDoubleTap(element) {
-//   element.addEventListener('touchend', (e) => {
-//     const now = Date.now();
-//     if (now - lastTap < 300 && now - lastTap > 0) {
-//       if (!document.fullscreenElement) {
-//         element.requestFullscreen().catch(() => {});
-//       } else {
-//         document.exitFullscreen().catch(() => {});
-//       }
-//       e.preventDefault();
-//     }
-//     lastTap = now;
-//   });
-// }
-// handleDoubleTap(document.getElementById('chatHistory'));
-// handleDoubleTap(document.getElementById('agentHistory'));
+// ── Fullscreen button handler ───────────────────────────────────────────────
+function toggleFullscreen(element) {
+  if (!document.fullscreenElement) {
+    element.requestFullscreen().catch(() => showToast('❌ Fullscreen недоступен'));
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+
+// Add fullscreen buttons to chat and agent
+const addFullscreenButton = (panelId, buttonContainerId) => {
+  const panel = document.getElementById(panelId);
+  if (panel) {
+    const btn = document.createElement('button');
+    btn.innerHTML = '⛶';
+    btn.style.cssText = 'position:absolute;top:50%;transform:translateY(-50%);right:10px;background:none;border:none;font-size:1.2rem;cursor:pointer;opacity:0.5;transition:opacity 0.2s';
+    btn.onmouseover = () => btn.style.opacity = '1';
+    btn.onmouseout = () => btn.style.opacity = '0.5';
+    btn.onclick = () => toggleFullscreen(panel);
+    btn.title = 'Fullscreen';
+    // Add to the panel (positioned relative)
+    panel.style.position = 'relative';
+    panel.style.overflow = 'hidden';
+    // Insert near top right
+    const header = panel.querySelector('.chat-header') || panel.querySelector('.chat-history');
+    if (header && header.parentNode) {
+      header.parentNode.style.position = 'relative';
+      header.parentNode.appendChild(btn);
+    }
+  }
+};
+
+setTimeout(() => {
+  addFullscreenButton('panel-chat', 'chatHistory');
+  addFullscreenButton('panel-agent', 'agentHistory');
+}, 500);
 
 // ── Chunking System ───────────────────────────────────────────────────────
 const CHUNK_SIZE = 2000; // символов на чанк
@@ -2455,16 +2472,88 @@ async function sendMessage(inputEl, historyEl) {
   const messageWithFiles = text + filesContext;
 
   try {
-    // Fallback: проверяем вопросы про возможности системы
-    const lowerText = text.toLowerCase();
-    const isAboutCapabilities = /что ты (умеешь|можешь|делаешь|умеете|можете|делаете)|what can you|what do you do|tell me about|расскажи|возможности|capabilities|features/.test(lowerText);
+    // Fallback: проверяем различные типы вопросов без AI
+    const lowerText = text.toLowerCase().trim();
+    const isRussian = /[а-яё]/.test(text);
+
+    // Определяем тип вопроса
+    const isGreeting = /^(привет|привет!|привет как дела|привет как ты|привет как вы|hello|hi|hey|howdy|greetings)\??!?$/.test(lowerText);
+    const isAboutCapabilities = /что ты (умеешь|можешь|делаешь|умеете|можете|делаете)|для чего ты|для чего вы|what can you|what do you do|what can i do|tell me about|расскажи|возможности|capabilities|features|что ты|что я могу|что можно|можно ли/.test(lowerText);
+    const isAboutArchitecture = /как (система|приложение|это) (устроена|устроена|работает|функционирует)|как работает|архитектура|устройство|структура|how (does|is) (it|system|app|this) (built|structured|work)|architecture|explain/.test(lowerText);
+
+    if (isGreeting) {
+      const greetingReply = isRussian
+        ? `👋 Привет! Я Velan Eiti — ваш персональный AI помощник.\n\nСпросите что я умею делать, или подскажи как система устроена! 🚀`
+        : `👋 Hi! I'm Velan Eiti — your personal AI assistant.\n\nAsk what I can do, or tell me how the system is built! 🚀`;
+      appendMsg(greetingReply, 'ai', historyEl);
+      if (db) dbPut('messages', { role: 'assistant', content: greetingReply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
+      typing.remove();
+      return;
+    }
+
+    if (isAboutArchitecture) {
+      const archReply = isRussian
+        ? `🏗️ **Как устроена система Velan Eiti:**
+
+🎯 **Основа** — HTML/CSS/JS в одном файле, никаких фреймворков
+
+💾 **Хранилище** — всё в IndexedDB (браузер):
+   • Чаты и сообщения
+   • Память (ключ-значение)
+   • Файлы и чанки
+   • Конфигурация
+
+🤖 **AI провайдеры**:
+   • Ollama (локально, офлайн на localhost:11434)
+   • Claude (Anthropic)
+   • OpenAI, DeepSeek, Groq, OpenRouter
+
+🎮 **Режимы**:
+   • 💬 Чат — общение с AI
+   • ⚡ Агент — автономные задачи (читает, пишет, запускает)
+   • 🧠 Память — сохранение ключевых данных
+   • 📜 История — архив всех сессий
+   • 📁 Файлы — RAG для контекста
+   • ⚙️ Настройки — выбор провайдера, темы
+
+📱 **PWA** — устанавливается на экран, работает офлайн через Ollama
+
+🎨 **13 тем** оформления на выбор`
+        : `🏗️ **How Velan Eiti System is Built:**
+
+🎯 **Foundation** — HTML/CSS/JS in one file, no frameworks
+
+💾 **Storage** — everything in IndexedDB (browser):
+   • Chats and messages
+   • Memory (key-value)
+   • Files and chunks
+   • Configuration
+
+🤖 **AI Providers**:
+   • Ollama (local, offline on localhost:11434)
+   • Claude (Anthropic)
+   • OpenAI, DeepSeek, Groq, OpenRouter
+
+🎮 **Modes**:
+   • 💬 Chat — talk with AI
+   • ⚡ Agent — autonomous tasks (reads, writes, executes)
+   • 🧠 Memory — save key data
+   • 📜 History — archive of all sessions
+   • 📁 Files — RAG for context
+   • ⚙️ Settings — choose provider, theme
+
+📱 **PWA** — installs on screen, works offline via Ollama
+
+🎨 **13 themes** to choose from`;
+      appendMsg(archReply, 'ai', historyEl);
+      if (db) dbPut('messages', { role: 'assistant', content: archReply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
+      typing.remove();
+      return;
+    }
 
     if (isAboutCapabilities) {
-      const isRussian = /[а-яё]/.test(text);
-      let fallbackReply = '';
-
-      if (isRussian) {
-        fallbackReply = `🎯 Вот что я могу делать:
+      const capabilitiesReply = isRussian
+        ? `🎯 Вот что я могу делать:
 
 📝 **Чат** — разговариваю с любым AI (Claude, DeepSeek, OpenAI, Groq, OpenRouter или локально Ollama)
 
@@ -2472,7 +2561,7 @@ async function sendMessage(inputEl, historyEl) {
 
 🧠 **Память** — сохраняю ключевые факты и данные (key-value хранилище) для контекста между чатами
 
-📜 **История** — все чаты и агентские сессии доступны в архиве
+📜 **История** — все чаты и агентские сессии доступны в архиве, можно экспортировать
 
 📁 **Файлы** — загружаю PDF, TXT, DOCX, изображения; использую RAG (поиск релевантных кусков) в ответах
 
@@ -2480,9 +2569,10 @@ async function sendMessage(inputEl, historyEl) {
 
 💾 **Офлайн** — работаю полностью в браузере через IndexedDB; могу работать локально через Ollama без интернета
 
-Для большего потенциала подключите AI провайдера в настройках! 🚀`;
-      } else {
-        fallbackReply = `🎯 Here's what I can do:
+📤 **Экспорт** — сохраняю данные в JSON, TXT форматах
+
+Для большего потенциала подключите AI провайдера в настройках! 🚀`
+        : `🎯 Here's what I can do:
 
 📝 **Chat** — talk with any AI (Claude, DeepSeek, OpenAI, Groq, OpenRouter or local Ollama)
 
@@ -2490,7 +2580,7 @@ async function sendMessage(inputEl, historyEl) {
 
 🧠 **Memory** — save key facts and data (key-value storage) for context between chats
 
-📜 **History** — all chats and agent sessions available in the archive
+📜 **History** — all chats and agent sessions available in the archive, can export
 
 📁 **Files** — upload PDF, TXT, DOCX, images; use RAG (retrieve relevant chunks) in responses
 
@@ -2498,21 +2588,20 @@ async function sendMessage(inputEl, historyEl) {
 
 💾 **Offline** — work fully in browser via IndexedDB; can work locally via Ollama without internet
 
-Connect an AI provider in settings for full potential! 🚀`;
-      }
+📤 **Export** — save data in JSON, TXT formats
 
-      appendMsg(fallbackReply, 'ai', historyEl);
-      if (db) dbPut('messages', { role: 'assistant', content: fallbackReply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
+Connect an AI provider in settings for full potential! 🚀`;
+      appendMsg(capabilitiesReply, 'ai', historyEl);
+      if (db) dbPut('messages', { role: 'assistant', content: capabilitiesReply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
       typing.remove();
       return;
     }
 
     // Если AI не подключен и это не про возможности - показываем ошибку
     if (!provider || provider === '') {
-      const isRussian = /[а-яё]/.test(text);
       const msg = isRussian
-        ? '⚠️ AI сейчас не подключен. Выберите провайдера в настройках (Ollama, Claude, DeepSeek и др.)'
-        : '⚠️ AI is not connected now. Select a provider in settings (Ollama, Claude, DeepSeek, etc.)';
+        ? '⚠️ AI сейчас не подключен. Выберите провайдера в настройках (Ollama, Claude, DeepSeek и др.)\n\n💡 Я могу ответить на вопросы про себя даже без AI!'
+        : '⚠️ AI is not connected now. Select a provider in settings (Ollama, Claude, DeepSeek, etc.)\n\n💡 I can answer questions about myself even without AI!';
       appendMsg(msg, 'ai', historyEl);
       typing.remove();
       return;
