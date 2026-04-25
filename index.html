@@ -2072,6 +2072,28 @@ const chatInput   = document.getElementById('chatInput');
   }
 });
 
+function stripMarkdown(text) {
+  // Remove triple-backtick code blocks (keep content)
+  text = text.replace(/```(?:[^\n]*)\n?([\s\S]*?)```/g, '$1');
+  // Remove inline code backticks
+  text = text.replace(/`([^`]+)`/g, '$1');
+  // Remove bold **text** and __text__
+  text = text.replace(/\*\*([^*]+)\*\*/g, '$1');
+  text = text.replace(/__([^_]+)__/g, '$1');
+  // Remove italic *text* and _text_
+  text = text.replace(/\*([^*]+)\*/g, '$1');
+  text = text.replace(/_([^_]+)_/g, '$1');
+  // Remove headings (#, ##, ###, etc.)
+  text = text.replace(/^#{1,6}\s+/gm, '');
+  // Remove horizontal rules (--- or ***)
+  text = text.replace(/^[-*]{3,}\s*$/gm, '');
+  // Remove list item markers (- item or * item)
+  text = text.replace(/^\s*[-*]\s+/gm, '');
+  // Collapse multiple blank lines
+  text = text.replace(/\n{3,}/g, '\n\n');
+  return text.trim();
+}
+
 function appendMsg(text, role, container) {
   container = container || chatHistory;
   const div = document.createElement('div');
@@ -2084,12 +2106,7 @@ function appendMsg(text, role, container) {
   let processedText = text;
   let fileBtn = '';
 
-  // Remove markdown formatting for clean display
-  processedText = processedText.replace(/\*\*([^*]+)\*\*/g, '$1');
-  processedText = processedText.replace(/^### .+$/gm, '');
-  processedText = processedText.replace(/^-+\s*$/gm, '');
-  processedText = processedText.replace(/^\s*-\s+/gm, '');
-  processedText = processedText.replace(/\n\n+/g, '\n');
+  processedText = stripMarkdown(processedText);
 
   if (fileMatch && role === 'ai') {
     const filename = fileMatch[1];
@@ -2227,13 +2244,17 @@ function copyMessage(msgId) {
 
 // Озвучивание сообщения через Web TTS
 let currentUtterance = null;
+let ttsKeepAlive = null;
+
 function speakMessage(msgId) {
   const msgEl = document.getElementById(msgId);
   if (!msgEl) return;
 
   // Остановить текущее воспроизведение
-  if (window.speechSynthesis.speaking) {
+  if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
     window.speechSynthesis.cancel();
+    clearInterval(ttsKeepAlive);
+    ttsKeepAlive = null;
     if (currentUtterance && currentUtterance._msgId === msgId) {
       currentUtterance = null;
       return;
@@ -2241,9 +2262,9 @@ function speakMessage(msgId) {
   }
 
   let text = msgEl.innerText || msgEl.textContent;
-
-  // Удалить эмодзи и специальные символы, оставить только буквы, цифры и пунктуацию
-  text = text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{2500}-\u{259F}]|[\u{0080}-\u{00FF}]|[^\w\s.,!?;:\-—–…()\n]/gu, ' ');
+  // Удалить эмодзи и оставить только читаемые символы
+  text = text.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2500}-\u{259F}]/gu, '');
+  text = text.replace(/[^\p{L}\p{N}\s.,!?;:\-—–…()]/gu, ' ');
   text = text.replace(/\s+/g, ' ').trim();
 
   if (!text) {
@@ -2251,27 +2272,64 @@ function speakMessage(msgId) {
     return;
   }
 
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance._msgId = msgId;
-  utterance.lang = 'ru-RU';
-  utterance.rate = 1;
-  utterance.pitch = 1;
+  function doSpeak() {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance._msgId = msgId;
+    utterance.lang = 'ru-RU';
+    utterance.rate = 1;
+    utterance.pitch = 1;
 
-  utterance.onstart = () => {
-    showToast('🔊 Воспроизведение...');
-  };
+    // Выбрать русский голос если доступен
+    const voices = window.speechSynthesis.getVoices();
+    const ruVoice = voices.find(v => v.lang && v.lang.startsWith('ru'));
+    if (ruVoice) utterance.voice = ruVoice;
 
-  utterance.onend = () => {
-    currentUtterance = null;
-  };
+    utterance.onstart = () => {
+      showToast('🔊 Воспроизведение...');
+      // Обходим баг Chrome: синтез останавливается через ~15с
+      ttsKeepAlive = setInterval(() => {
+        if (window.speechSynthesis.speaking) {
+          window.speechSynthesis.pause();
+          window.speechSynthesis.resume();
+        } else {
+          clearInterval(ttsKeepAlive);
+          ttsKeepAlive = null;
+        }
+      }, 10000);
+    };
 
-  utterance.onerror = () => {
-    currentUtterance = null;
-    showToast('❌ Ошибка воспроизведения');
-  };
+    utterance.onend = () => {
+      currentUtterance = null;
+      clearInterval(ttsKeepAlive);
+      ttsKeepAlive = null;
+    };
 
-  currentUtterance = utterance;
-  window.speechSynthesis.speak(utterance);
+    utterance.onerror = (e) => {
+      currentUtterance = null;
+      clearInterval(ttsKeepAlive);
+      ttsKeepAlive = null;
+      if (e.error !== 'interrupted') {
+        showToast('❌ Ошибка TTS: ' + (e.error || 'неизвестная'));
+      }
+    };
+
+    currentUtterance = utterance;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // Chrome: голоса могут ещё не загрузиться при первом вызове
+  if (window.speechSynthesis.getVoices().length === 0) {
+    window.speechSynthesis.onvoiceschanged = () => {
+      window.speechSynthesis.onvoiceschanged = null;
+      doSpeak();
+    };
+    // Запасной вариант — если событие не придёт
+    setTimeout(() => {
+      if (!currentUtterance) doSpeak();
+    }, 500);
+  } else {
+    doSpeak();
+  }
 }
 
 // ── Files Management ───────────────────────────────────────────────────────
@@ -2664,7 +2722,7 @@ Connect any AI provider in settings! I'll become a powerful productivity tool.`;
               const json = JSON.parse(line);
               const token = json.message?.content || '';
               fullReply += token;
-              if (msgContent) msgContent.textContent = fullReply;
+              if (msgContent) msgContent.textContent = stripMarkdown(fullReply);
               historyEl.scrollTop = historyEl.scrollHeight;
             } catch {}
           }
