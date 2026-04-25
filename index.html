@@ -593,6 +593,48 @@ main {
 .msg-content {
   word-wrap: break-word;
 }
+.msg-content strong { font-weight: 700; }
+.msg-content em { font-style: italic; opacity: .9; }
+.msg-content code.md-inline-code {
+  background: rgba(0,0,0,.25);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: .88em;
+}
+.msg-content pre.md-code {
+  background: rgba(0,0,0,.3);
+  padding: 10px 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 6px 0;
+  font-family: monospace;
+  font-size: .85em;
+  white-space: pre;
+}
+.msg-content pre.md-code code { background: none; padding: 0; }
+.msg-content .md-h1,.msg-content .md-h2,.msg-content .md-h3 {
+  font-weight: 700;
+  margin: .5em 0 .15em;
+}
+.msg-content .md-h1 { font-size: 1.1em; }
+.msg-content .md-h2 { font-size: 1.05em; }
+.msg-content .md-h3 { font-size: .97em; opacity: .85; }
+.msg-content hr.md-hr {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,.18);
+  margin: .5em 0;
+}
+.msg-content .md-li {
+  padding-left: .9em;
+  position: relative;
+}
+.msg-content .md-li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  opacity: .7;
+}
 
 /* typing indicator */
 .typing-dots {
@@ -2072,27 +2114,36 @@ const chatInput   = document.getElementById('chatInput');
   }
 });
 
-function stripMarkdown(text) {
-  // Remove triple-backtick code blocks (keep content)
-  text = text.replace(/```(?:[^\n]*)\n?([\s\S]*?)```/g, '$1');
-  // Remove inline code backticks
-  text = text.replace(/`([^`]+)`/g, '$1');
-  // Remove bold **text** and __text__
-  text = text.replace(/\*\*([^*]+)\*\*/g, '$1');
-  text = text.replace(/__([^_]+)__/g, '$1');
-  // Remove italic *text* and _text_
-  text = text.replace(/\*([^*]+)\*/g, '$1');
-  text = text.replace(/_([^_]+)_/g, '$1');
-  // Remove headings (#, ##, ###, etc.)
-  text = text.replace(/^#{1,6}\s+/gm, '');
-  // Remove horizontal rules (--- or ***)
-  text = text.replace(/^[-*]{3,}\s*$/gm, '');
-  // Remove list item markers (- item or * item)
-  text = text.replace(/^\s*[-*]\s+/gm, '');
-  // Collapse multiple blank lines
-  text = text.replace(/\n{3,}/g, '\n\n');
-  return text.trim();
+function renderMarkdown(text) {
+  // Escape HTML to prevent XSS
+  let h = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  // Fenced code blocks
+  h = h.replace(/```(?:[^\n]*)\n?([\s\S]*?)```/g, (_, code) =>
+    '<pre class="md-code"><code>' + code.trim() + '</code></pre>');
+  // Inline code
+  h = h.replace(/`([^`\n]+)`/g, '<code class="md-inline-code">$1</code>');
+  // Bold
+  h = h.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  h = h.replace(/__([^_\n]+)__/g, '<strong>$1</strong>');
+  // Italic (only if not already inside strong)
+  h = h.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  h = h.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+  // Headings
+  h = h.replace(/^### (.+)$/gm, '<div class="md-h3">$1</div>');
+  h = h.replace(/^## (.+)$/gm, '<div class="md-h2">$1</div>');
+  h = h.replace(/^# (.+)$/gm, '<div class="md-h1">$1</div>');
+  // Horizontal rules
+  h = h.replace(/^[-*]{3,}\s*$/gm, '<hr class="md-hr">');
+  // List items
+  h = h.replace(/^\s*[-*]\s+(.+)$/gm, '<div class="md-li">$1</div>');
+  // Line breaks
+  h = h.replace(/\n/g, '<br>');
+  return h;
 }
+
 
 function appendMsg(text, role, container) {
   container = container || chatHistory;
@@ -2106,7 +2157,7 @@ function appendMsg(text, role, container) {
   let processedText = text;
   let fileBtn = '';
 
-  processedText = stripMarkdown(processedText);
+  processedText = renderMarkdown(processedText);
 
   if (fileMatch && role === 'ai') {
     const filename = fileMatch[1];
@@ -2244,89 +2295,84 @@ function copyMessage(msgId) {
 
 // Озвучивание сообщения через Web TTS
 let currentUtterance = null;
-let ttsKeepAlive = null;
+let ttsQueue = [];
+let ttsActiveMsgId = null;
+
+function ttsStop() {
+  window.speechSynthesis.cancel();
+  ttsQueue = [];
+  ttsActiveMsgId = null;
+  currentUtterance = null;
+}
+
+function ttsSplitChunks(text, maxLen) {
+  // Split at sentence boundaries, keeping chunks under maxLen chars
+  const chunks = [];
+  const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+  let buf = '';
+  for (const s of sentences) {
+    if (buf.length + s.length > maxLen && buf) {
+      chunks.push(buf.trim());
+      buf = s;
+    } else {
+      buf += s;
+    }
+  }
+  if (buf.trim()) chunks.push(buf.trim());
+  return chunks;
+}
+
+function ttsSpeakNext() {
+  if (!ttsQueue.length) { ttsActiveMsgId = null; currentUtterance = null; return; }
+  const chunk = ttsQueue.shift();
+  const voices = window.speechSynthesis.getVoices();
+  const ruVoice = voices.find(v => v.lang && v.lang.startsWith('ru'));
+  const utt = new SpeechSynthesisUtterance(chunk);
+  utt.lang = 'ru-RU';
+  utt.rate = 1;
+  utt.pitch = 1;
+  if (ruVoice) utt.voice = ruVoice;
+  utt.onend = () => ttsSpeakNext();
+  utt.onerror = (e) => {
+    if (e.error !== 'interrupted') showToast('❌ Ошибка TTS: ' + (e.error || '?'));
+    ttsStop();
+  };
+  currentUtterance = utt;
+  window.speechSynthesis.speak(utt);
+}
 
 function speakMessage(msgId) {
   const msgEl = document.getElementById(msgId);
   if (!msgEl) return;
 
-  // Остановить текущее воспроизведение
-  if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-    window.speechSynthesis.cancel();
-    clearInterval(ttsKeepAlive);
-    ttsKeepAlive = null;
-    if (currentUtterance && currentUtterance._msgId === msgId) {
-      currentUtterance = null;
-      return;
-    }
-  }
+  // Повторное нажатие — остановить
+  if (ttsActiveMsgId === msgId) { ttsStop(); return; }
+  ttsStop();
 
+  // Взять чистый текст (innerText снимает HTML-теги)
   let text = msgEl.innerText || msgEl.textContent;
-  // Удалить эмодзи и оставить только читаемые символы
-  text = text.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2500}-\u{259F}]/gu, '');
-  text = text.replace(/[^\p{L}\p{N}\s.,!?;:\-—–…()]/gu, ' ');
+  // Убрать эмодзи (широкий Unicode-диапазон без \p{} для совместимости)
+  text = text.replace(/[\uD800-\uDFFF][\uD800-\uDFFF]|[☀-➿]|[⌀-⏿]/g, '');
+  // Оставить буквы (все языки -￿), цифры, пробелы и пунктуацию
+  text = text.replace(/[^\w-￿\s.,!?;:\-—–…()]/g, ' ');
   text = text.replace(/\s+/g, ' ').trim();
 
-  if (!text) {
-    showToast('❌ Нет текста для озвучивания');
-    return;
-  }
+  if (!text) { showToast('❌ Нет текста для озвучивания'); return; }
 
   function doSpeak() {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance._msgId = msgId;
-    utterance.lang = 'ru-RU';
-    utterance.rate = 1;
-    utterance.pitch = 1;
-
-    // Выбрать русский голос если доступен
-    const voices = window.speechSynthesis.getVoices();
-    const ruVoice = voices.find(v => v.lang && v.lang.startsWith('ru'));
-    if (ruVoice) utterance.voice = ruVoice;
-
-    utterance.onstart = () => {
-      showToast('🔊 Воспроизведение...');
-      // Обходим баг Chrome: синтез останавливается через ~15с
-      ttsKeepAlive = setInterval(() => {
-        if (window.speechSynthesis.speaking) {
-          window.speechSynthesis.pause();
-          window.speechSynthesis.resume();
-        } else {
-          clearInterval(ttsKeepAlive);
-          ttsKeepAlive = null;
-        }
-      }, 10000);
-    };
-
-    utterance.onend = () => {
-      currentUtterance = null;
-      clearInterval(ttsKeepAlive);
-      ttsKeepAlive = null;
-    };
-
-    utterance.onerror = (e) => {
-      currentUtterance = null;
-      clearInterval(ttsKeepAlive);
-      ttsKeepAlive = null;
-      if (e.error !== 'interrupted') {
-        showToast('❌ Ошибка TTS: ' + (e.error || 'неизвестная'));
-      }
-    };
-
-    currentUtterance = utterance;
-    window.speechSynthesis.speak(utterance);
+    // Разбить на чанки ≤200 символов — обходит лимит Android TTS
+    // и 15-секундный баг Chrome без pause/resume
+    ttsQueue = ttsSplitChunks(text, 200);
+    ttsActiveMsgId = msgId;
+    showToast('🔊 Воспроизведение...');
+    ttsSpeakNext();
   }
 
-  // Chrome: голоса могут ещё не загрузиться при первом вызове
+  // Chrome: getVoices() пуст при первом вызове
   if (window.speechSynthesis.getVoices().length === 0) {
-    window.speechSynthesis.onvoiceschanged = () => {
-      window.speechSynthesis.onvoiceschanged = null;
-      doSpeak();
-    };
-    // Запасной вариант — если событие не придёт
-    setTimeout(() => {
-      if (!currentUtterance) doSpeak();
-    }, 500);
+    const onReady = () => { window.speechSynthesis.onvoiceschanged = null; doSpeak(); };
+    window.speechSynthesis.onvoiceschanged = onReady;
+    setTimeout(() => { if (!ttsActiveMsgId) doSpeak(); }, 500);
   } else {
     doSpeak();
   }
@@ -2722,7 +2768,7 @@ Connect any AI provider in settings! I'll become a powerful productivity tool.`;
               const json = JSON.parse(line);
               const token = json.message?.content || '';
               fullReply += token;
-              if (msgContent) msgContent.textContent = stripMarkdown(fullReply);
+              if (msgContent) msgContent.innerHTML = renderMarkdown(fullReply);
               historyEl.scrollTop = historyEl.scrollHeight;
             } catch {}
           }
@@ -2845,7 +2891,7 @@ Connect any AI provider in settings! I'll become a powerful productivity tool.`;
               token = json.choices?.[0]?.delta?.content || '';
             }
             fullReply += token;
-            if (msgContent) msgContent.textContent = fullReply;
+            if (msgContent) msgContent.innerHTML = renderMarkdown(fullReply);
             historyEl.scrollTop = historyEl.scrollHeight;
           } catch {}
         }
