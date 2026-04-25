@@ -619,6 +619,11 @@ main {
   border-color: rgba(201,149,42,0.6);
 }
 
+.attach-btn.small {
+  padding: 6px 8px;
+  font-size: 0.9rem;
+}
+
 .input-wrap textarea {
   flex: 1;
 }
@@ -1110,7 +1115,8 @@ main {
       
       <div class="input-bar">
         <div class="input-wrap">
-          <button class="attach-btn" id="chatAttachBtn" title="Прикрепить файл">📎</button>
+          <button class="attach-btn small" id="chatAttachBtn" title="Прикрепить файл">📎</button>
+          <button class="attach-btn small" id="chatClearBtn" title="Очистить/Скопировать">♻️</button>
           <textarea id="chatInput" rows="1" placeholder="Сообщение... (Enter — отправить, Shift+Enter — перенос)"></textarea>
         </div>
         <button class="send-btn" id="sendBtn" title="Отправить">
@@ -1150,7 +1156,8 @@ main {
       
       <div class="input-bar">
         <div class="input-wrap">
-          <button class="attach-btn" id="agentAttachBtn" title="Прикрепить файл">📎</button>
+          <button class="attach-btn small" id="agentAttachBtn" title="Прикрепить файл">📎</button>
+          <button class="attach-btn small" id="agentClearBtn" title="Очистить/Скопировать">♻️</button>
           <textarea id="agentInput" rows="1" placeholder="Задача для агента..."></textarea>
         </div>
         <button class="send-btn" id="agentSendBtn" title="Запустить агента">
@@ -2000,8 +2007,12 @@ function appendMsg(text, role, container) {
   let processedText = text;
   let fileBtn = '';
 
-  // Remove markdown asterisks for clean display
+  // Remove markdown formatting for clean display
   processedText = processedText.replace(/\*\*([^*]+)\*\*/g, '$1');
+  processedText = processedText.replace(/^### .+$/gm, '');
+  processedText = processedText.replace(/^-+\s*$/gm, '');
+  processedText = processedText.replace(/^\s*-\s+/gm, '');
+  processedText = processedText.replace(/\n\n+/g, '\n');
 
   if (fileMatch && role === 'ai') {
     const filename = fileMatch[1];
@@ -2113,6 +2124,33 @@ document.getElementById('chatAttachBtn').addEventListener('click', () => {
   document.getElementById('chatFileInput').click();
 });
 
+let chatClearTimeout = null;
+let chatClearClickCount = 0;
+document.getElementById('chatClearBtn').addEventListener('click', () => {
+  chatClearClickCount++;
+
+  if (chatClearTimeout) clearTimeout(chatClearTimeout);
+
+  if (chatClearClickCount === 1) {
+    chatClearTimeout = setTimeout(() => {
+      document.getElementById('chatInput').value = '';
+      showToast('🗑️ Поле очищено');
+      chatClearClickCount = 0;
+    }, 300);
+  } else if (chatClearClickCount === 2) {
+    clearTimeout(chatClearTimeout);
+    const history = document.getElementById('chatHistory');
+    const text = history.innerText || history.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('📋 Весь чат скопирован');
+      chatClearClickCount = 0;
+    }).catch(() => {
+      showToast('❌ Ошибка копирования');
+      chatClearClickCount = 0;
+    });
+  }
+});
+
 document.getElementById('chatFileInput').addEventListener('change', async (e) => {
   const files = Array.from(e.target.files);
   if (!files.length) return;
@@ -2145,6 +2183,33 @@ document.getElementById('addAgentFileBtn').addEventListener('click', () => {
 
 document.getElementById('agentAttachBtn').addEventListener('click', () => {
   document.getElementById('agentFileInput').click();
+});
+
+let agentClearTimeout = null;
+let agentClearClickCount = 0;
+document.getElementById('agentClearBtn').addEventListener('click', () => {
+  agentClearClickCount++;
+
+  if (agentClearTimeout) clearTimeout(agentClearTimeout);
+
+  if (agentClearClickCount === 1) {
+    agentClearTimeout = setTimeout(() => {
+      document.getElementById('agentInput').value = '';
+      showToast('🗑️ Поле очищено');
+      agentClearClickCount = 0;
+    }, 300);
+  } else if (agentClearClickCount === 2) {
+    clearTimeout(agentClearTimeout);
+    const history = document.getElementById('agentHistory');
+    const text = history.innerText || history.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('📋 Весь чат скопирован');
+      agentClearClickCount = 0;
+    }).catch(() => {
+      showToast('❌ Ошибка копирования');
+      agentClearClickCount = 0;
+    });
+  }
 });
 
 document.getElementById('agentFileInput').addEventListener('change', async (e) => {
