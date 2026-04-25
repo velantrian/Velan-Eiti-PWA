@@ -2040,6 +2040,25 @@ async function deleteChunksByFileName(fileName) {
 const chatHistory = document.getElementById('chatHistory');
 const chatInput   = document.getElementById('chatInput');
 
+// Отслеживание ручного скролла - останавливает автоскролл при касании
+[chatHistory, document.getElementById('agentHistory')].forEach(el => {
+  if (el) {
+    el.addEventListener('touchstart', () => {
+      el.dataset.userScrolled = 'true';
+      setTimeout(() => {
+        el.dataset.userScrolled = '';
+      }, 3000); // Возобновить автоскролл через 3 секунды
+    }, { passive: true });
+
+    el.addEventListener('scroll', () => {
+      const isAtBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 100;
+      if (isAtBottom) {
+        el.dataset.userScrolled = '';
+      }
+    }, { passive: true });
+  }
+});
+
 function appendMsg(text, role, container) {
   container = container || chatHistory;
   const div = document.createElement('div');
@@ -2064,7 +2083,7 @@ function appendMsg(text, role, container) {
     const fileContent = fileMatch[2];
     processedText = text.replace(/```file:[^\n]+\n[\s\S]*?```/, `<div class="msg-file" data-filename="${filename}" data-content="${encodeURIComponent(fileContent)}">📄 ${filename}</div>`);
   }
-  
+
   div.innerHTML = `
     <div class="msg-meta">
       ${role === 'user' ? '👤 Вы' : '⚡ Velan Eiti'} · ${now}
@@ -2082,8 +2101,12 @@ function appendMsg(text, role, container) {
     </div>
   `;
   container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
-  
+
+  // Auto-scroll only if user hasn't manually scrolled
+  if (!container.dataset.userScrolled) {
+    container.scrollTop = container.scrollHeight;
+  }
+
   // Add click handlers for file downloads
   div.querySelectorAll('.msg-file').forEach(fileEl => {
     fileEl.style.cursor = 'pointer';
@@ -2100,7 +2123,7 @@ function appendMsg(text, role, container) {
       showToast(`📥 Файл ${filename} скачан`);
     });
   });
-  
+
   return div;
 }
 
