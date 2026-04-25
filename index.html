@@ -2035,8 +2035,10 @@ function appendMsg(text, role, container) {
     <div class="msg-meta">
       ${role === 'user' ? '👤 Вы' : '⚡ Velan Eiti'} · ${now}
       <div class="msg-actions">
-        <button class="msg-action-btn" onclick="copyMessage('${msgId}')" title="Копировать">📋</button>
-        <button class="msg-action-btn" onclick="speakMessage('${msgId}')" title="Озвучить">🔊</button>
+        ${role === 'user'
+          ? `<button class="msg-action-btn" onclick="editMessage('${msgId}')" title="Редактировать">↩️</button><button class="msg-action-btn" onclick="resendMessage('${msgId}')" title="Отправить заново">📤</button>`
+          : `<button class="msg-action-btn" onclick="copyMessage('${msgId}')" title="Копировать">📋</button><button class="msg-action-btn" onclick="speakMessage('${msgId}')" title="Озвучить">🔊</button>`
+        }
       </div>
     </div>
     <div id="${msgId}" class="msg-content">${processedText}</div>
@@ -2072,11 +2074,39 @@ function showTyping(container) {
   return div;
 }
 
+// Редактирование пользовательского сообщения
+function editMessage(msgId) {
+  const msgEl = document.getElementById(msgId);
+  if (!msgEl) return;
+  const text = msgEl.innerText || msgEl.textContent;
+  const inputEl = activePanel === 'chat' ? document.getElementById('chatInput') : document.getElementById('agentInput');
+  if (inputEl) {
+    inputEl.value = text;
+    inputEl.focus();
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
+    showToast('✏️ Отредактируйте и отправьте заново');
+  }
+}
+
+// Переотправка сообщения
+async function resendMessage(msgId) {
+  const msgEl = document.getElementById(msgId);
+  if (!msgEl) return;
+  const text = msgEl.innerText || msgEl.textContent;
+  const historyEl = activePanel === 'chat' ? document.getElementById('chatHistory') : document.getElementById('agentHistory');
+  const inputEl = activePanel === 'chat' ? document.getElementById('chatInput') : document.getElementById('agentInput');
+  if (inputEl && historyEl) {
+    inputEl.value = text;
+    await sendMessage(inputEl, historyEl);
+  }
+}
+
 // Копирование сообщения
 function copyMessage(msgId) {
   const msgEl = document.getElementById(msgId);
   if (!msgEl) return;
-  
+
   const text = msgEl.innerText || msgEl.textContent;
   navigator.clipboard.writeText(text).then(() => {
     showToast('📋 Текст скопирован');
@@ -2661,9 +2691,9 @@ async function loadHistory() {
     const div = document.createElement('div');
     div.className = 'history-item';
     const roleIcon = item.role === 'user' ? '👤' : '🤖';
-    const panelBadge = item.panel === 'agent' ? '⚡' : '💬';
-    const time = new Date(item.ts).toLocaleString('ru-RU', { 
-      day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' 
+    const panelBadge = item.panel === 'agent' ? '🤖⚡️' : '💭';
+    const time = new Date(item.ts).toLocaleString('ru-RU', {
+      day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
     });
     const highlightedContent = highlightText(item.content, searchQuery);
     div.innerHTML = `
