@@ -1287,6 +1287,12 @@ main {
         </div>
         
         <div id="memoryItems"></div>
+
+        <button onclick="showWizardMemory()" 
+                style="margin-top: 12px; width: 100%; padding: 14px; border-radius: 16px; background: linear-gradient(135deg, #4f46e5, #6366f1); color: white; border: none; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);">
+          <span style="font-size: 22px;">🧠</span>
+          <span>Что помнит Волшебник?</span>
+        </button>
       </div>
     </section>
 
@@ -1568,6 +1574,53 @@ main {
           </div>
         </div>
 
+        <div class="card" style="margin-top: 20px;">
+          <h3 style="margin: 0 0 12px 0; font-size: 18px;">🧠 Память Волшебника</h3>
+          
+          <p style="font-size: 14px; color: #666; margin-bottom: 16px; line-height: 1.5;">
+            Волшебник — это тихий помощник, который в фоне запоминает важное о твоём проекте. 
+            Он делает работу с агентом намного удобнее и умнее.
+          </p>
+
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+              <input type="checkbox" id="memLongTerm" checked style="width: 20px; height: 20px;">
+              <div>
+                <div style="font-weight: 600;">🧠 Долгосрочная память</div>
+                <div style="font-size: 13px; color: #666;">Запоминает главные цели и важные решения проекта навсегда</div>
+              </div>
+            </label>
+
+            <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+              <input type="checkbox" id="memDaily" checked style="width: 20px; height: 20px;">
+              <div>
+                <div style="font-weight: 600;">📅 Ежедневные заметки</div>
+                <div style="font-size: 13px; color: #666;">Запоминает, что ты делал сегодня (как дневник проекта)</div>
+              </div>
+            </label>
+
+            <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+              <input type="checkbox" id="memProactive" checked style="width: 20px; height: 20px;">
+              <div>
+                <div style="font-weight: 600;">✨ Проактивные идеи</div>
+                <div style="font-size: 13px; color: #666;">Сохраняет твои "хотел бы" и идеи для будущего</div>
+              </div>
+            </label>
+
+            <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+              <input type="checkbox" id="memPattern" checked style="width: 20px; height: 20px;">
+              <div>
+                <div style="font-weight: 600;">🔍 Умное распознавание</div>
+                <div style="font-size: 13px; color: #666;">Когда ты говоришь о чём-то знакомом — Волшебник вспоминает прошлые обсуждения</div>
+              </div>
+            </label>
+          </div>
+
+          <div style="margin-top: 16px; font-size: 12px; color: #888; border-top: 1px solid #eee; padding-top: 12px;">
+            💡 Полный контроль: можешь оставить только долгосрочную память, если хочешь проще.
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-title" data-i18n="card_pwa">📱 PWA</div>
           <div class="toggle-row">
@@ -1599,8 +1652,8 @@ main {
 // ── Config & State ───────────────────────────────────────────────────────
 const APP_VERSION = "1.7.0";
 const DB_NAME    = 'velan-eiti-db';
-const DB_VERSION = 3;
-const STORES     = ['messages', 'config', 'memory', 'agent_backups', 'files', 'chats', 'agents', 'chunks'];
+const DB_VERSION = 4;
+const STORES     = ['messages', 'config', 'memory', 'agent_backups', 'files', 'chats', 'agents', 'chunks', 'long_term_memory', 'daily_notes', 'dreams'];
 
 let db = null;
 let deferredInstall = null;
@@ -1650,6 +1703,16 @@ function openDB() {
           idb.createObjectStore(s, { keyPath: 'id' });
         }
       });
+      // Волшебник v2.6 — хранилища памяти
+      if (!idb.objectStoreNames.contains('long_term_memory')) {
+        idb.createObjectStore('long_term_memory', { keyPath: 'key' });
+      }
+      if (!idb.objectStoreNames.contains('daily_notes')) {
+        idb.createObjectStore('daily_notes', { keyPath: 'timestamp' });
+      }
+      if (!idb.objectStoreNames.contains('dreams')) {
+        idb.createObjectStore('dreams', { keyPath: 'timestamp' });
+      }
     };
     req.onsuccess = e => { db = e.target.result; resolve(db); };
     req.onerror   = e => reject(e.target.error);
@@ -1682,6 +1745,111 @@ function dbGetAll(store) {
     req.onerror   = () => reject(req.error);
   });
 }
+
+// =============================================
+// ✨ ВОЛШЕБНИК v2.6 — Умная память (Rosebud-style)
+// =============================================
+
+const Wizard = {
+  async rememberLongTerm(key, value, category = 'fact', importance = 3) {
+    if (!db) return;
+    await dbPut('long_term_memory', {
+      key: key.trim(),
+      value: String(value).trim(),
+      category,
+      importance: Math.max(1, Math.min(5, importance)),
+      timestamp: Date.now(),
+      source: 'agent'
+    });
+  },
+
+  async addDailyNote(content, category = 'observation') {
+    if (!db) return;
+    const today = new Date().toISOString().split('T')[0];
+    await dbPut('daily_notes', {
+      date: today,
+      content: String(content).trim(),
+      category,
+      timestamp: Date.now()
+    });
+  },
+
+  async addDream(idea, priority = 'medium') {
+    if (!db) return;
+    await dbPut('dreams', {
+      idea: String(idea).trim(),
+      priority,
+      timestamp: Date.now(),
+      status: 'pending'
+    });
+  },
+
+  async analyzeAndRemember(userMessage, agentResponse) {
+    const fullText = (userMessage + ' ' + agentResponse).toLowerCase();
+    let importance = 2;
+
+    if (fullText.includes('цель') || fullText.includes('goal') || fullText.includes('запомни')) importance = 5;
+    else if (fullText.includes('важно') || fullText.includes('критично')) importance = 4;
+    else if (fullText.includes('цвет') || fullText.includes('дизайн')) importance = 3;
+
+    if (fullText.includes('цель') || fullText.includes('goal')) {
+      await this.rememberLongTerm('project_goal', userMessage, 'goal', importance);
+    }
+    if (fullText.includes('запомни') || fullText.includes('важно')) {
+      await this.rememberLongTerm('important_note', userMessage, 'important', importance);
+    }
+
+    await this.addDailyNote(`Чат: ${userMessage.substring(0, 90)}...`, 'chat');
+
+    if (fullText.includes('хотел бы') || fullText.includes('можно было бы')) {
+      await this.addDream(userMessage, 'low');
+    }
+  },
+
+  async getSmartContext() {
+    if (!db) return '';
+
+    const [longTerm, daily, dreams] = await Promise.all([
+      dbGetAll('long_term_memory'),
+      dbGetAll('daily_notes'),
+      dbGetAll('dreams')
+    ]);
+
+    let context = '';
+
+    if (longTerm.length > 0 && window.memorySettings?.longTermMemory) {
+      const sorted = longTerm.sort((a, b) => (b.importance * 1000 + b.timestamp) - (a.importance * 1000 + a.timestamp)).slice(0, 12);
+      context += `
+╔══════════════════════════════════════════════╗
+║           🧠 ДОЛГОСРОЧНАЯ ПАМЯТЬ             ║
+╠══════════════════════════════════════════════╣
+${sorted.map(m => `• [${m.category}] ${m.key}: ${m.value}`).join('\n')}
+╚══════════════════════════════════════════════╝`;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const todayNotes = daily.filter(n => n.date === today);
+    if (todayNotes.length > 0 && window.memorySettings?.dailyNotes) {
+      context += `
+╔══════════════════════════════════════════════╗
+║           📅 СЕГОДНЯ (${today})              ║
+╠══════════════════════════════════════════════╣
+${todayNotes.map(n => `• ${n.content}`).join('\n')}
+╚══════════════════════════════════════════════╝`;
+    }
+
+    if (dreams.length > 0 && window.memorySettings?.proactive) {
+      context += `
+╔══════════════════════════════════════════════╗
+║           ✨ ПРОАКТИВНЫЕ ИДЕИ                ║
+╠══════════════════════════════════════════════╣
+${dreams.slice(0, 5).map(d => `• ${d.idea}`).join('\n')}
+╚══════════════════════════════════════════════╝`;
+    }
+
+    return context;
+  }
+};
 
 // ── Service Worker registration ──────────────────────────────────────────
 if ('serviceWorker' in navigator) {
@@ -3404,6 +3572,7 @@ openDB().then(() => {
   loadChatSelector(); // Загрузка селектора чатов
   loadAgentSelector(); // Загрузка селектора агентов
   cleanupOldMessages(); // Очистка старых сообщений
+  loadMemorySettings();
   startWizardListener();
   rememberProjectFact("version", "1.7.0", "core");
   rememberProjectFact("last_update", new Date().toISOString(), "core");
@@ -3737,11 +3906,7 @@ function shuffleOpenRouterModel() {
 }
 
 function startWizardListener() {
-  window.addEventListener('message', e => {
-    if (e.data && e.data.type === 'WIZARD_COMMAND') {
-      console.log('[Velan] Wizard command:', e.data);
-    }
-  });
+  console.log('✨ Волшебник v2.6 активирован');
 }
 
 async function rememberProjectFact(key, value, category = "general") {
@@ -3755,6 +3920,95 @@ async function rememberProjectFact(key, value, category = "general") {
   });
 }
 
+async function showWizardMemory() {
+  const modal = document.getElementById('wizardModal');
+  const content = document.getElementById('wizardContent');
+  modal.style.display = 'flex';
+  content.innerHTML = '<p style="text-align:center; padding:60px 20px; color:#666;">🧠 Загружаю память...</p>';
+
+  const context = await Wizard.getSmartContext();
+  content.innerHTML = context ? context.replace(/\n/g, '<br>') : 
+    '<div style="text-align:center; padding:50px 20px;"><div style="font-size:48px; margin-bottom:16px;">🧠</div><div style="font-size:18px; font-weight:600;">Память пока пуста</div></div>';
+}
+
+function closeWizardModal() {
+  document.getElementById('wizardModal').style.display = 'none';
+}
+
+async function clearWizardMemory() {
+  if (!confirm('Очистить всю память Волшебника?')) return;
+  if (!db) return;
+  const stores = ['long_term_memory', 'daily_notes', 'dreams'];
+  for (const store of stores) {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).clear();
+  }
+  document.getElementById('wizardContent').innerHTML = '<div style="text-align:center; padding:40px 20px; color:#b91c1c;">🗑️ Память очищена</div>';
+  setTimeout(() => closeWizardModal(), 1200);
+}
+
+async function exportWizardMemory() {
+  const context = await Wizard.getSmartContext();
+  if (!context) { alert('Память пуста'); return; }
+  const blob = new Blob([context], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `wizard-memory-${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+}
+
+function loadMemorySettings() {
+  const saved = localStorage.getItem('memorySettings');
+  const defaults = { longTermMemory: true, dailyNotes: true, proactive: true, patternRecognition: true };
+  window.memorySettings = saved ? JSON.parse(saved) : defaults;
+
+  document.getElementById('memLongTerm').checked = window.memorySettings.longTermMemory;
+  document.getElementById('memDaily').checked = window.memorySettings.dailyNotes;
+  document.getElementById('memProactive').checked = window.memorySettings.proactive;
+  document.getElementById('memPattern').checked = window.memorySettings.patternRecognition;
+
+  document.getElementById('memLongTerm').onchange = saveMemorySettings;
+  document.getElementById('memDaily').onchange = saveMemorySettings;
+  document.getElementById('memProactive').onchange = saveMemorySettings;
+  document.getElementById('memPattern').onchange = saveMemorySettings;
+}
+
+function saveMemorySettings() {
+  window.memorySettings = {
+    longTermMemory: document.getElementById('memLongTerm').checked,
+    dailyNotes: document.getElementById('memDaily').checked,
+    proactive: document.getElementById('memProactive').checked,
+    patternRecognition: document.getElementById('memPattern').checked
+  };
+  localStorage.setItem('memorySettings', JSON.stringify(window.memorySettings));
+}
+
 </script>
+
+<!-- Wizard Modal -->
+<div id="wizardModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 9999; align-items: center; justify-content: center;">
+  <div style="background: rgba(255,255,255,0.96); backdrop-filter: blur(20px); border-radius: 24px; width: 92%; max-width: 520px; max-height: 88vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.35);">
+    
+    <div style="padding: 20px 24px; background: linear-gradient(135deg, #4f46e5, #6366f1); color: white; display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 28px;">🧠</span>
+        <div>
+          <div style="font-size: 20px; font-weight: 700;">Волшебник</div>
+          <div style="font-size: 13px; opacity: 0.9;">Память проекта</div>
+        </div>
+      </div>
+      <button onclick="closeWizardModal()" style="background: none; border: none; color: white; font-size: 28px; cursor: pointer; width: 40px; height: 40px;">&times;</button>
+    </div>
+
+    <div id="wizardContent" style="padding: 20px; max-height: 58vh; overflow-y: auto; font-size: 15px; line-height: 1.6; color: #1f2937;">
+    </div>
+
+    <div style="padding: 16px 24px; border-top: 1px solid #eee; display: flex; gap: 12px; background: #f8fafc;">
+      <button onclick="clearWizardMemory()" style="flex: 1; padding: 13px; border-radius: 14px; background: #fee2e2; color: #b91c1c; border: none; font-weight: 600;">🗑️ Очистить</button>
+      <button onclick="exportWizardMemory()" style="flex: 1; padding: 13px; border-radius: 14px; background: #dbeafe; color: #1e40af; border: none; font-weight: 600;">📤 Экспорт</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
