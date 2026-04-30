@@ -1409,17 +1409,24 @@ main {
           </div>
           <div class="field">
             <label data-i18n="lbl_model">Модель</label>
-            <select id="cfgModel">
-              <option value="deepseek-v4-flash">DeepSeek V4 Flash ⭐</option>
-              <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
-              <option value="claude-opus-4-7">Claude Opus 4.7</option>
-              <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
-              <option value="gpt-5.5">GPT-5.5 ⭐</option>
-              <option value="gpt-5.4-mini">GPT-5.4 mini</option>
-              <option value="gemma4:e4b">Gemma 4 E4B (Ollama) ⭐</option>
-              <option value="qwen3:8b">Qwen 3 8B (Ollama)</option>
-              <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Groq)</option>
-            </select>
+            <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px;">
+              <select id="cfgModel" class="glass-input" style="flex: 1;">
+                <option value="deepseek-v4-flash">DeepSeek V4 Flash ⭐</option>
+                <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
+                <option value="claude-opus-4-7">Claude Opus 4.7</option>
+                <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
+                <option value="gpt-5.5">GPT-5.5 ⭐</option>
+                <option value="gpt-5.4-mini">GPT-5.4 mini</option>
+                <option value="gemma4:e4b">Gemma 4 E4B (Ollama) ⭐</option>
+                <option value="qwen3:8b">Qwen 3 8B (Ollama)</option>
+                <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Groq)</option>
+              </select>
+              <button id="shuffleModelBtn" 
+                      onclick="shuffleOpenRouterModel()" 
+                      style="display: none; padding: 8px 14px; border-radius: 12px; background: #4f46e5; color: white; border: none; font-size: 18px; cursor: pointer;">
+                🎲
+              </button>
+            </div>
           </div>
           <div class="field">
             <label>Подключить интернет</label>
@@ -1590,6 +1597,7 @@ main {
 
 <script>
 // ── Config & State ───────────────────────────────────────────────────────
+const APP_VERSION = "1.7.0";
 const DB_NAME    = 'velan-eiti-db';
 const DB_VERSION = 3;
 const STORES     = ['messages', 'config', 'memory', 'agent_backups', 'files', 'chats', 'agents', 'chunks'];
@@ -1607,6 +1615,22 @@ let agentLoadToken = 0;
 // Хранилище загруженных файлов для чата и агента
 let chatFiles = [];
 let agentFiles = [];
+
+// === OPENROUTER FREE MODELS ===
+const FREE_MODELS = [
+  "deepseek/deepseek-r1:free",
+  "qwen/qwen2.5-72b-instruct:free",
+  "google/gemma-3-27b-it:free",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "mistralai/mistral-7b-instruct:free",
+  "microsoft/phi-4:free",
+  "nousresearch/nous-hermes-2-mixtral-8x7b:free",
+  "gryphe/mythomist-7b:free"
+];
+
+function getRandomFreeModel() {
+  return FREE_MODELS[Math.floor(Math.random() * FREE_MODELS.length)];
+}
 
 // ── IndexedDB init ───────────────────────────────────────────────────────
 function openDB() {
@@ -2603,6 +2627,65 @@ function formatFileSize(bytes) {
 }
 
 
+async function sendToAPI(provider, model, messages, systemPrompt = "") {
+  const history = messages.slice(-40);
+  const apiKey = sessionStorage.getItem('cfgApiKey');
+
+  let url, headers, body;
+
+  if (provider === "OpenRouter") {
+    url = "https://openrouter.ai/api/v1/chat/completions";
+    headers = {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://velan-eiti-pwa.vercel.app",
+      "X-Title": "Velan Eiti PWA"
+    };
+    body = {
+      model: model,
+      messages: [
+        ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
+        ...history
+      ],
+      temperature: 0.7,
+      max_tokens: 4000
+    };
+  } 
+  else if (provider === "DeepSeek") {
+    url = "https://api.deepseek.com/chat/completions";
+    headers = { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" };
+    body = {
+      model: model || "deepseek-chat",
+      messages: [
+        ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
+        ...history
+      ]
+    };
+  }
+  else if (provider === "Claude") {
+    url = "https://api.anthropic.com/v1/messages";
+    headers = { 
+      "x-api-key": apiKey, 
+      "anthropic-version": "2023-06-01",
+      "Content-Type": "application/json" 
+    };
+    body = {
+      model: model || "claude-4.6-sonnet",
+      max_tokens: 4000,
+      messages: history,
+      system: systemPrompt || undefined
+    };
+  }
+
+  const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+  const data = await res.json();
+
+  if (provider === "Claude") {
+    return data.content?.[0]?.text || "Ошибка Claude";
+  }
+  return data.choices?.[0]?.message?.content || "Ошибка ответа";
+}
+
 async function sendMessage(inputEl, historyEl) {
   const text = inputEl.value.trim();
   if (!text) return;
@@ -2625,7 +2708,7 @@ async function sendMessage(inputEl, historyEl) {
     ? (document.getElementById('cfgAgentInstructions').value.trim())
     : (document.getElementById('cfgChatInstructions').value.trim());
 
-  const sysInfo = `[VELAN EITI v1.6.0 — архитектура приложения]\nFrontend: HTML/CSS/JS, один файл index.html без фреймворков.\nХранилище: IndexedDB (chats, messages, memory, files, config) — всё в браузере.\nAI провайдеры: Ollama (офлайн, localhost:11434), Claude (Anthropic), OpenAI, DeepSeek, Groq, OpenRouter.\nРежимы: Чат, Агент (пошаговые задачи), Память (key-value), История, Файлы, Настройки.\nPWA: Service Worker (sw.js), manifest.json, устанавливается на экран, офлайн через Ollama.\nТемы: 13 тем (data-theme на body).\nФайлы: загрузка PDF/TXT/DOCX/изображений, RAG-контекст через чанки.\nТы видишь эту информацию и можешь советовать улучшения.`;
+  const sysInfo = `[VELAN EITI v1.7.0 — архитектура приложения]\nFrontend: HTML/CSS/JS, один файл index.html без фреймворков.\nХранилище: IndexedDB (chats, messages, memory, files, config) — всё в браузере.\nAI провайдеры: Ollama (офлайн, localhost:11434), Claude (Anthropic), OpenAI, DeepSeek, Groq, OpenRouter.\nРежимы: Чат, Агент (пошаговые задачи), Память (key-value), История, Файлы, Настройки.\nPWA: Service Worker (sw.js), manifest.json, устанавливается на экран, офлайн через Ollama.\nТемы: 13 тем (data-theme на body).\nФайлы: загрузка PDF/TXT/DOCX/изображений, RAG-контекст через чанки.\nТы видишь эту информацию и можешь советовать улучшения.`;
 
   const instructions = userInstr ? `${userInstr}\n\n${sysInfo}` : sysInfo;
 
@@ -2808,7 +2891,7 @@ Connect any AI provider in settings! I'll become a powerful productivity tool.`;
       return;
     }
 
-    // Внешние API (DeepSeek, Claude, OpenAI, Groq, OpenRouter)
+    // Внешние API (DeepSeek, Claude, OpenAI, Groq, OpenRouter) — с памятью истории
     if (!apiKey) {
       appendMsg('❌ API Key не установлен. Введите ключ в настройках и нажмите "Активировать".', 'ai', historyEl);
       return;
@@ -2819,120 +2902,23 @@ Connect any AI provider in settings! I'll become a powerful productivity tool.`;
       return;
     }
 
-    let apiUrl, headers, body;
-
-    switch (provider) {
-      case 'deepseek':
-        apiUrl = 'https://api.deepseek.com/v1/chat/completions';
-        headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
-        body = {
-          model,
-          messages: [
-            ...(instructions ? [{ role: 'system', content: instructions }] : []),
-            { role: 'user', content: messageWithFiles }
-          ]
-        };
-        break;
-      case 'claude':
-        apiUrl = 'https://api.anthropic.com/v1/messages';
-        headers = { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' };
-        body = {
-          model,
-          max_tokens: 4096,
-          ...(instructions ? { system: instructions } : {}),
-          messages: [{ role: 'user', content: messageWithFiles }]
-        };
-        break;
-      case 'openai':
-        apiUrl = 'https://api.openai.com/v1/chat/completions';
-        headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
-        body = {
-          model,
-          messages: [
-            ...(instructions ? [{ role: 'system', content: instructions }] : []),
-            { role: 'user', content: messageWithFiles }
-          ]
-        };
-        break;
-      case 'groq':
-        apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
-        headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
-        body = {
-          model,
-          messages: [
-            ...(instructions ? [{ role: 'system', content: instructions }] : []),
-            { role: 'user', content: messageWithFiles }
-          ]
-        };
-        break;
-      case 'openrouter':
-        apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
-        headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
-        body = {
-          model,
-          messages: [
-            ...(instructions ? [{ role: 'system', content: instructions }] : []),
-            { role: 'user', content: messageWithFiles }
-          ]
-        };
-        break;
+    // Собираем историю из IndexedDB для контекста
+    let chatHistory = [];
+    if (db) {
+      const allMsgs = await dbGetAll('messages');
+      chatHistory = allMsgs
+        .filter(m => m.chatId === currentChatId && (m.role === 'user' || m.role === 'assistant'))
+        .sort((a, b) => a.ts - b.ts)
+        .map(m => ({ role: m.role, content: m.content }));
+    }
+    if (chatHistory.length === 0) {
+      chatHistory = [{ role: 'user', content: messageWithFiles }];
     }
 
-    const shouldStream = document.getElementById('cfgStream')?.checked ?? false;
-    if (shouldStream) body.stream = true;
-
-    const resp = await fetch(apiUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body)
-    });
-
-    if (!resp.ok) {
-      const errorData = await resp.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `HTTP ${resp.status}`);
-    }
-
-    if (shouldStream) {
-      typing.remove();
-      const msgDiv = appendMsg('', 'ai', historyEl);
-      const msgContent = msgDiv.querySelector('.msg-content');
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let fullReply = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const lines = decoder.decode(value, { stream: true }).split('\n');
-        for (const line of lines) {
-          if (!line.startsWith('data:')) continue;
-          const raw = line.slice(5).trim();
-          if (raw === '[DONE]') continue;
-          try {
-            const json = JSON.parse(raw);
-            let token = '';
-            if (provider === 'claude') {
-              token = json.delta?.text || json.delta?.type === 'text_delta' ? (json.delta?.text || '') : '';
-            } else {
-              token = json.choices?.[0]?.delta?.content || '';
-            }
-            fullReply += token;
-            if (msgContent) msgContent.innerHTML = renderMarkdown(fullReply);
-            if (!historyEl.dataset.userScrolled) historyEl.scrollTop = historyEl.scrollHeight;
-          } catch {}
-        }
-      }
-      if (db) dbPut('messages', { role: 'assistant', content: fullReply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
-    } else {
-      const data = await resp.json();
-      let reply;
-      if (provider === 'claude') {
-        reply = data.content?.[0]?.text || '(пустой ответ)';
-      } else {
-        reply = data.choices?.[0]?.message?.content || '(пустой ответ)';
-      }
-      appendMsg(reply, 'ai', historyEl);
-      if (db) dbPut('messages', { role: 'assistant', content: reply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
-    }
+    const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
+    const reply = await sendToAPI(providerName, model, chatHistory, instructions);
+    appendMsg(reply, 'ai', historyEl);
+    if (db) dbPut('messages', { role: 'assistant', content: reply, ts: Date.now(), panel: activePanel, chatId: currentChatId });
 
   } catch (e) {
     appendMsg(`❌ Ошибка: ${e.message}`, 'ai', historyEl);
@@ -3304,6 +3290,19 @@ async function cleanupOldMessages() {
     const key = id.replace('cfg','').toLowerCase();
     saveConfigField(key, e.target.value);
     if (key === 'theme') applyTheme(e.target.value);
+    if (key === 'provider') {
+      const provider = e.target.value;
+      if (provider === 'openrouter') {
+        const randomModel = getRandomFreeModel();
+        document.getElementById('cfgModel').value = randomModel;
+        showToast(`🎲 Выбрана бесплатная модель: ${randomModel.split("/")[1]}`, 3500);
+        const shuffleBtn = document.getElementById('shuffleModelBtn');
+        if (shuffleBtn) shuffleBtn.style.display = 'inline-block';
+      } else {
+        const shuffleBtn = document.getElementById('shuffleModelBtn');
+        if (shuffleBtn) shuffleBtn.style.display = 'none';
+      }
+    }
   });
 });
 ['cfgThinking','cfgStream','cfgStats','cfgAutoConfirm'].forEach(id => {
@@ -3405,7 +3404,10 @@ openDB().then(() => {
   loadChatSelector(); // Загрузка селектора чатов
   loadAgentSelector(); // Загрузка селектора агентов
   cleanupOldMessages(); // Очистка старых сообщений
-  showToast('⚡ Velan Eiti загружен');
+  startWizardListener();
+  rememberProjectFact("version", "1.7.0", "core");
+  rememberProjectFact("last_update", new Date().toISOString(), "core");
+  showToast('⚡ Velan Eiti v1.7.0 загружен');
 }).catch(err => console.warn('IndexedDB:', err));
 
 // Set initial history state so back button works from the start
@@ -3726,6 +3728,31 @@ function downloadFile(content, filename, mimeType) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+function shuffleOpenRouterModel() {
+  const randomModel = getRandomFreeModel();
+  document.getElementById('cfgModel').value = randomModel;
+  showToast(`🎲 Новая модель: ${randomModel.split("/")[1]}`, 3000);
+}
+
+function startWizardListener() {
+  window.addEventListener('message', e => {
+    if (e.data && e.data.type === 'WIZARD_COMMAND') {
+      console.log('[Velan] Wizard command:', e.data);
+    }
+  });
+}
+
+async function rememberProjectFact(key, value, category = "general") {
+  if (!db) return;
+  await dbPut('memory', {
+    id: `project_${category}_${key}`,
+    key: key,
+    value: value,
+    category: category,
+    ts: Date.now()
+  });
 }
 
 </script>
