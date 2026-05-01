@@ -53,6 +53,11 @@
   --agent-log-bg: rgba(5,2,12,0.8);
   --install-btn-bg: linear-gradient(135deg, var(--gold-dim), var(--gold));
   --install-btn-text: var(--purple-deep);
+  /* Aliases for embedded OpenRouter block */
+  --border-color: var(--toggle-border);
+  --panel-bg:     var(--input-bg);
+  --text-color:   var(--text);
+  --secondary-color: var(--card-bg);
 }
 
 /* Midnight (default) */
@@ -1433,6 +1438,56 @@ main {
               <button id="activateApiKey" class="btn-small" data-i18n="btn_activate">✓ Активировать</button>
               <button id="clearApiKey" class="btn-small" title="Очистить API ключ">🗑</button>
             </div>
+          </div>
+
+          <!-- OPENROUTER API Key block -->
+          <div id="orKeyBlock" style="display:none;border-top:1px solid var(--toggle-border);padding-top:12px;margin-top:2px;background:rgba(255,200,0,0.05);border-radius:12px;padding:14px;margin-bottom:8px;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:#FFD700;">🔀 OpenRouter API Key</div>
+            <div style="font-size:11px;opacity:0.5;margin-bottom:8px;line-height:1.5;">Единый доступ к 300+ моделям (Claude, GPT, Llama, Mistral и др.). Получить ключ: openrouter.ai/settings/keys</div>
+
+            <div style="display:flex;gap:6px;align-items:stretch;margin-bottom:8px;">
+              <input type="password" id="openrouter-key" placeholder="sk-or-v1-xxxxxxxxxxxx"
+                     style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border-color);background:var(--panel-bg);color:var(--text-color);font-size:15px;-webkit-appearance:none;">
+              <button onclick="eitiClearKey('openrouter-key','eiti_or_key')" title="Очистить" style="padding:0 12px;border-radius:12px;border:1px solid var(--border-color);background:var(--secondary-color);color:var(--text-color);font-size:18px;cursor:pointer;flex-shrink:0;">🗑</button>
+            </div>
+
+            <button onclick="eitiConfirmORKey()"
+                    style="margin-top:6px;padding:10px 16px;border-radius:12px;border:2px solid #FFD700;background:#FFD700;color:#000;font-weight:700;font-size:14px;cursor:pointer;width:100%;box-shadow:0 2px 8px rgba(255,215,0,0.3);">
+              ✓ Подтвердить ключ
+            </button>
+            <div id="or-key-status" style="font-size:12px;min-height:18px;text-align:center;margin-top:4px;"></div>
+
+            <script>window._OR_DEFAULT_KEY='WUABQlwCRhsGSE4dGQcbGxwZGxdTHRpIGx4cCB4aGkkZHQFOTxsbHkpREhNNGBZNVB0bHh8ZGQYaTk8cSBZVS0gVGhofBxpKSA==';</script>
+
+            <div style="margin-top:12px;">
+              <div style="font-size:12px;opacity:0.6;margin-bottom:6px;font-weight:600;">🧩 Модель</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+                <button id="or-model-auto" onclick="eitiSetORModel('openrouter/auto')"
+                    style="flex:1;min-width:68px;padding:7px 4px;border-radius:9px;border:2px solid #FFD700;background:rgba(255,200,0,0.25);color:var(--text-color);font-size:11px;font-weight:700;cursor:pointer;">🤖 Auto</button>
+                <button id="or-model-claude" onclick="eitiSetORModel('anthropic/claude-sonnet-4-6')"
+                    style="flex:1;min-width:68px;padding:7px 4px;border-radius:9px;border:2px solid var(--border-color);background:var(--secondary-color);color:var(--text-color);font-size:11px;font-weight:700;cursor:pointer;">Claude</button>
+                <button id="or-model-insta" onclick="eitiSetORModel('openai/gpt-4o-mini')"
+                    style="flex:1;min-width:68px;padding:7px 4px;border-radius:9px;border:2px solid var(--border-color);background:var(--secondary-color);color:var(--text-color);font-size:11px;font-weight:700;cursor:pointer;">CHATGPT (INSTA)</button>
+                <button id="or-model-think" onclick="eitiSetORModel('openai/gpt-4o')"
+                    style="flex:1;min-width:68px;padding:7px 4px;border-radius:9px;border:2px solid var(--border-color);background:var(--secondary-color);color:var(--text-color);font-size:11px;font-weight:700;cursor:pointer;">CHATGPT THINK</button>
+                <button id="or-model-qwen" onclick="eitiSetORModel('qwen/qwen2.5-72b-instruct')"
+                    style="flex:1;min-width:68px;padding:7px 4px;border-radius:9px;border:2px solid var(--border-color);background:var(--secondary-color);color:var(--text-color);font-size:11px;font-weight:700;cursor:pointer;">QWEN</button>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <input type="text" id="openrouter-model-custom" placeholder="provider/model-name"
+                       style="flex:1;padding:9px 10px;border-radius:10px;border:1px solid var(--border-color);background:var(--panel-bg);color:var(--text-color);font-size:13px;"
+                       oninput="eitiSetORModel(this.value.trim()||'openrouter/auto')">
+                <button onclick="window.open('https://openrouter.ai/models','_blank')"
+                    style="padding:9px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--secondary-color);color:var(--text-color);font-size:12px;cursor:pointer;">📋 Все</button>
+              </div>
+              <div id="or-model-label" style="font-size:11px;opacity:0.45;margin-top:5px;text-align:center;">Модель: openrouter/auto</div>
+            </div>
+
+            <button onclick="eitiTestOpenRouter()"
+                    style="margin-top:8px;padding:10px;border-radius:10px;border:1px solid var(--border-color);background:var(--secondary-color);color:var(--text-color);font-size:13px;font-weight:600;cursor:pointer;width:100%;">
+              Проверить OpenRouter ключ
+            </button>
+            <div id="eiti-or-status" style="padding:8px;border-radius:10px;text-align:center;background:var(--secondary-color);min-height:32px;font-size:13px;margin-top:6px;"></div>
           </div>
           <div class="field">
             <label data-i18n="lbl_apistatus">Статус API</label>
@@ -3371,7 +3426,163 @@ async function cleanupOldMessages() {
   });
 });
 
-// Инструкции — сохранение
+// ── OpenRouter dedicated key block ────────────────────────────────────────
+
+// XOR-decode the bundled default key
+function _orDecodeKey(b64) {
+  const raw = atob(b64);
+  const xk = [0x2a,0x2b,0x2c,0x2d,0x2e,0x2f,0x30];
+  return Array.from(raw).map((c,i) => String.fromCharCode(c.charCodeAt(0) ^ xk[i % xk.length])).join('');
+}
+
+// Show/hide the OR key block based on selected provider
+function _orUpdateBlockVisibility() {
+  const prov = document.getElementById('cfgProvider').value;
+  const block = document.getElementById('orKeyBlock');
+  if (block) block.style.display = prov === 'openrouter' ? 'block' : 'none';
+}
+
+// Restore OR key into the input on load
+function _orRestoreKey() {
+  const stored = sessionStorage.getItem('eiti_or_key');
+  const input = document.getElementById('openrouter-key');
+  if (input && stored) input.value = stored;
+}
+
+// Restore active OR model button state
+function _orRestoreModel() {
+  const m = sessionStorage.getItem('eiti_or_model') || 'openrouter/auto';
+  const label = document.getElementById('or-model-label');
+  if (label) label.textContent = 'Модель: ' + m;
+  const ids = {
+    'openrouter/auto': 'or-model-auto',
+    'anthropic/claude-sonnet-4-6': 'or-model-claude',
+    'openai/gpt-4o-mini': 'or-model-insta',
+    'openai/gpt-4o': 'or-model-think',
+    'qwen/qwen2.5-72b-instruct': 'or-model-qwen'
+  };
+  ['or-model-auto','or-model-claude','or-model-insta','or-model-think','or-model-qwen'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const isActive = ids[m] === id;
+    btn.style.border = isActive ? '2px solid #FFD700' : '2px solid var(--toggle-border)';
+    btn.style.background = isActive ? 'rgba(255,200,0,0.25)' : 'var(--card-bg)';
+  });
+}
+
+function eitiClearKey(inputId, storageKey) {
+  const el = document.getElementById(inputId);
+  if (el) el.value = '';
+  sessionStorage.removeItem(storageKey);
+  if (storageKey === 'eiti_or_key') {
+    const status = document.getElementById('or-key-status');
+    if (status) status.textContent = '';
+  }
+  showToast('🗑 Ключ очищен');
+}
+
+function eitiConfirmORKey() {
+  const input = document.getElementById('openrouter-key');
+  const status = document.getElementById('or-key-status');
+  let key = input ? input.value.trim() : '';
+
+  // Use bundled default if blank
+  if (!key && window._OR_DEFAULT_KEY) {
+    key = _orDecodeKey(window._OR_DEFAULT_KEY);
+    if (input) input.value = key;
+  }
+
+  if (!key) {
+    if (status) { status.textContent = '⚠️ Введите API ключ'; status.style.color = '#f87171'; }
+    return;
+  }
+
+  sessionStorage.setItem('eiti_or_key', key);
+  sessionStorage.setItem('cfgApiKey', key);
+  // Mirror into the main API key field so existing chat logic picks it up
+  const mainKey = document.getElementById('cfgApiKey');
+  if (mainKey) mainKey.value = key;
+
+  if (status) { status.textContent = '✅ Ключ сохранён'; status.style.color = '#4ade80'; }
+  showToast('✅ OpenRouter ключ активирован', 2500);
+}
+
+function eitiSetORModel(model) {
+  if (!model) return;
+  sessionStorage.setItem('eiti_or_model', model);
+
+  // Update the main cfgModel dropdown and persist
+  const modelSel = document.getElementById('cfgModel');
+  if (modelSel) {
+    // If option exists, select it; otherwise add a temporary one
+    let found = false;
+    for (const opt of modelSel.options) {
+      if (opt.value === model) { modelSel.value = model; found = true; break; }
+    }
+    if (!found) {
+      const opt = document.createElement('option');
+      opt.value = model;
+      opt.textContent = model;
+      modelSel.appendChild(opt);
+      modelSel.value = model;
+    }
+    saveConfigField('model', model);
+  }
+
+  const label = document.getElementById('or-model-label');
+  if (label) label.textContent = 'Модель: ' + model;
+
+  // Highlight active button
+  const map = {
+    'openrouter/auto': 'or-model-auto',
+    'anthropic/claude-sonnet-4-6': 'or-model-claude',
+    'openai/gpt-4o-mini': 'or-model-insta',
+    'openai/gpt-4o': 'or-model-think',
+    'qwen/qwen2.5-72b-instruct': 'or-model-qwen'
+  };
+  ['or-model-auto','or-model-claude','or-model-insta','or-model-think','or-model-qwen'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const isActive = map[model] === id;
+    btn.style.border = isActive ? '2px solid #FFD700' : '2px solid var(--toggle-border)';
+    btn.style.background = isActive ? 'rgba(255,200,0,0.25)' : 'var(--card-bg)';
+  });
+}
+
+async function eitiTestOpenRouter() {
+  const statusEl = document.getElementById('eiti-or-status');
+  const key = sessionStorage.getItem('eiti_or_key') || sessionStorage.getItem('cfgApiKey');
+  if (!key) {
+    if (statusEl) { statusEl.textContent = '⚠️ Ключ не установлен'; statusEl.style.color = '#f87171'; }
+    return;
+  }
+  if (statusEl) { statusEl.textContent = '⏳ Проверка...'; statusEl.style.color = 'var(--text-dim)'; }
+  try {
+    const resp = await fetch('https://openrouter.ai/api/v1/models', {
+      headers: { 'Authorization': 'Bearer ' + key },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      const count = data.data ? data.data.length : '?';
+      if (statusEl) { statusEl.textContent = `✅ Подключено! Доступно ${count} моделей`; statusEl.style.color = '#4ade80'; }
+    } else {
+      if (statusEl) { statusEl.textContent = `❌ Ошибка: HTTP ${resp.status}`; statusEl.style.color = '#f87171'; }
+    }
+  } catch(e) {
+    if (statusEl) { statusEl.textContent = '❌ ' + e.message; statusEl.style.color = '#f87171'; }
+  }
+}
+
+// Wire up provider change to show/hide OR block
+document.getElementById('cfgProvider').addEventListener('change', _orUpdateBlockVisibility);
+
+// Init on DOM ready
+_orUpdateBlockVisibility();
+_orRestoreKey();
+_orRestoreModel();
+
+// ── Инструкции — сохранение ───────────────────────────────────────────────
 document.getElementById('saveInstructions').addEventListener('click', () => {
   const chatInstr = document.getElementById('cfgChatInstructions').value.trim();
   const agentInstr = document.getElementById('cfgAgentInstructions').value.trim();
