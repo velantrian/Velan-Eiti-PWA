@@ -244,7 +244,7 @@ Phase 5 — Экосистема
 
 🛠 Установка
 
-git clone https://github.com/velantrian/Velan-Eiti-PWA
+git clone https://velantrian.github.io/Velan-Eiti-PWA/#chat
 
 
 ---
