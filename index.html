@@ -54,10 +54,10 @@
   --install-btn-bg: linear-gradient(135deg, var(--gold-dim), var(--gold));
   --install-btn-text: var(--purple-deep);
   /* Aliases for embedded OpenRouter block */
-  --border-color: var(--toggle-border);
-  --panel-bg:     var(--input-bg);
-  --text-color:   var(--text);
-  --secondary-color: var(--card-bg);
+  --border-color:    rgba(201,149,42,0.35);
+  --panel-bg:        var(--input-bg);
+  --text-color:      var(--text);
+  --secondary-color: rgba(201,149,42,0.12);
 }
 
 /* Midnight (default) */
@@ -883,6 +883,16 @@ main {
 .btn-small:active {
   transform: scale(0.97);
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.22);
+}
+
+/* OpenRouter block aliases for light themes */
+[data-theme="light"],
+[data-theme="pearl"],
+[data-theme="azure"],
+[data-theme="book"] {
+  --border-color:    rgba(0,0,0,0.18);
+  --panel-bg:        rgba(0,0,0,0.06);
+  --secondary-color: rgba(0,0,0,0.07);
 }
 
 /* btn-small on light backgrounds */
@@ -3384,6 +3394,13 @@ async function cleanupOldMessages() {
   function populateOpenRouterModels() {
     modelSelect.innerHTML = '';
 
+    // openrouter/auto as the safe default at the top
+    const autoOpt = document.createElement('option');
+    autoOpt.value = 'openrouter/auto';
+    autoOpt.textContent = '🤖 Auto (OpenRouter)';
+    modelSelect.appendChild(autoOpt);
+
+    // Random free mode option
     const randomOpt = document.createElement('option');
     randomOpt.value = 'random';
     randomOpt.textContent = '🎲 Random Free Mode';
@@ -3398,10 +3415,9 @@ async function cleanupOldMessages() {
       modelSelect.appendChild(opt);
     });
 
-    const randomModel = getRandomFreeModel();
-    modelSelect.value = randomModel;
-    showToast('🎲 Выбрана случайная бесплатная модель', 2800);
-    saveConfigField('model', randomModel);
+    // Default to auto — safe and always works
+    modelSelect.value = 'openrouter/auto';
+    saveConfigField('model', 'openrouter/auto');
   }
 
   providerSelect.addEventListener('change', function() {
@@ -3414,7 +3430,7 @@ async function cleanupOldMessages() {
     if (this.value === 'random') {
       const newRandom = getRandomFreeModel();
       this.value = newRandom;
-      showToast('🎲 Новая случайная модель: ' + newRandom.split('/')[1], 2500);
+      showToast('🎲 Случайная модель: ' + newRandom.split('/')[1], 2500);
       saveConfigField('model', newRandom);
     }
   });
