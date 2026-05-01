@@ -3158,6 +3158,20 @@ document.getElementById('clearHistory').addEventListener('click', async () => {
 // ── Config persistence ───────────────────────────────────────────────────
 const MAX_MESSAGES = 1000; // Лимит сообщений в IndexedDB
 
+// === OPENROUTER FREE MODELS ===
+const FREE_MODELS = [
+  "deepseek/deepseek-r1:free",
+  "qwen/qwen2.5-72b-instruct:free",
+  "google/gemma-3-27b-it:free",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "mistralai/mistral-7b-instruct:free",
+  "microsoft/phi-4:free"
+];
+
+function getRandomFreeModel() {
+  return FREE_MODELS[Math.floor(Math.random() * FREE_MODELS.length)];
+}
+
 async function loadConfig() {
   if (!db) return;
   const items = await dbGetAll('config');
@@ -3306,6 +3320,51 @@ async function cleanupOldMessages() {
     if (key === 'theme') applyTheme(e.target.value);
   });
 });
+
+// OpenRouter: populate model list on provider change
+(function() {
+  const providerSelect = document.getElementById('cfgProvider');
+  const modelSelect = document.getElementById('cfgModel');
+
+  function populateOpenRouterModels() {
+    modelSelect.innerHTML = '';
+
+    const randomOpt = document.createElement('option');
+    randomOpt.value = 'random';
+    randomOpt.textContent = '🎲 Random Free Mode';
+    randomOpt.style.fontWeight = '600';
+    randomOpt.style.color = '#4f46e5';
+    modelSelect.appendChild(randomOpt);
+
+    FREE_MODELS.forEach(model => {
+      const opt = document.createElement('option');
+      opt.value = model;
+      opt.textContent = model.split('/')[1].replace(':free', ' (free)');
+      modelSelect.appendChild(opt);
+    });
+
+    const randomModel = getRandomFreeModel();
+    modelSelect.value = randomModel;
+    showToast('🎲 Выбрана случайная бесплатная модель', 2800);
+    saveConfigField('model', randomModel);
+  }
+
+  providerSelect.addEventListener('change', function() {
+    if (this.value === 'openrouter') {
+      populateOpenRouterModels();
+    }
+  });
+
+  modelSelect.addEventListener('change', function() {
+    if (this.value === 'random') {
+      const newRandom = getRandomFreeModel();
+      this.value = newRandom;
+      showToast('🎲 Новая случайная модель: ' + newRandom.split('/')[1], 2500);
+      saveConfigField('model', newRandom);
+    }
+  });
+})();
+
 ['cfgThinking','cfgStream','cfgStats','cfgAutoConfirm'].forEach(id => {
   document.getElementById(id).addEventListener('change', e => {
     saveConfigField(id.replace('cfg','').toLowerCase(), e.target.checked);
